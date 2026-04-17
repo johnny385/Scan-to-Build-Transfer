@@ -448,14 +448,24 @@ async function startCamFromTap() {
 
 async function initCam() {
   const overlay = document.getElementById('cam-start-overlay');
+
+  // Step 1 — getUserMedia triggers the Chrome permission prompt
   try {
-    // First request raw getUserMedia so Chrome shows the permission prompt
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    stream.getTracks().forEach(t => t.stop()); // release the test stream
+    stream.getTracks().forEach(t => t.stop());
+  } catch(e) {
+    if (overlay) overlay.innerHTML = '<div style="text-align:center;padding:0 24px"><div style="font-size:13px;color:#f87171;margin-bottom:8px;">Camera permission denied</div><div style="font-size:12px;color:#64748b;line-height:1.5;">Tap the lock icon → Permissions → Camera → Allow, then reload.</div></div>';
+    document.getElementById('scan-hint').textContent = 'Use manual entry below';
+    return;
+  }
 
-    // Now hide overlay and start ZXing
-    if (overlay) overlay.style.display = 'none';
+  // Step 2 — permission granted, hide overlay
+  if (overlay) overlay.style.display = 'none';
+  document.getElementById('scan-hint').textContent = 'Point at barcode';
 
+  // Step 3 — start ZXing decoder
+  // The callback fires every frame — err here just means "no barcode visible yet", not a camera failure
+  try {
     const reader = new ZXingBrowser.BrowserMultiFormatReader();
     const devices = await ZXingBrowser.BrowserCodeReader.listVideoInputDevices();
     const dev = devices.find(d => /back|rear|environment/i.test(d.label)) || devices[devices.length-1];
@@ -463,6 +473,7 @@ async function initCam() {
       { video: { deviceId: dev?.deviceId, facingMode:'environment' } },
       document.getElementById('preview'),
       (res, err) => {
+        // err on every frame with no barcode is normal — only act on successful reads
         if (res && appState.scanning) {
           const code = res.getText();
           if (code !== appState.lastCode) { appState.lastCode = code; handleScan(code); }
@@ -470,8 +481,10 @@ async function initCam() {
       }
     );
   } catch(e) {
-    if (overlay) overlay.innerHTML = '<div style="text-align:center;padding:0 24px"><div style="font-size:13px;color:#f87171;margin-bottom:8px;">Camera permission denied</div><div style="font-size:12px;color:#64748b;line-height:1.5;">Tap the lock icon in Chrome\'s address bar → Permissions → Camera → Allow, then reload.</div></div>';
-    document.getElementById('scan-hint').textContent = 'Camera blocked — use manual entry below';
+    // Only flag genuine device errors, not routine ZXing startup noise
+    if (e && (e.name === 'NotAllowedError' || e.name === 'NotFoundError')) {
+      document.getElementById('scan-hint').textContent = 'Camera error — use manual entry below';
+    }
   }
 }
 

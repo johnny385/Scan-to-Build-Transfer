@@ -182,13 +182,62 @@ select option { background: #1a1d27; }
 .toast.ok  { border-color: var(--green-border); color: var(--green); }
 .toast.err { border-color: var(--danger-border); color: var(--danger); }
 
+/* ── PIN SCREEN ── */
+#pin-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100dvh; padding:32px 20px; background:var(--bg); }
+.pin-logo { display:flex; align-items:center; gap:10px; margin-bottom:40px; }
+.pin-logo-box { width:34px; height:34px; background:var(--accent); border-radius:9px; display:flex; align-items:center; justify-content:center; }
+.pin-title { font-size:20px; font-weight:700; letter-spacing:-0.4px; margin-bottom:6px; color:var(--text); text-align:center; }
+.pin-sub { font-size:13px; color:var(--text2); margin-bottom:32px; text-align:center; }
+.pin-dots { display:flex; gap:14px; margin-bottom:32px; }
+.pin-dot { width:16px; height:16px; border-radius:50%; border:2px solid var(--text3); background:transparent; transition:background 0.15s, border-color 0.15s; }
+.pin-dot.filled { background:var(--accent); border-color:var(--accent); }
+.pin-dot.error { background:var(--danger); border-color:var(--danger); }
+.pin-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:100%; max-width:280px; }
+.pin-btn { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:18px; font-size:22px; font-weight:600; color:var(--text); cursor:pointer; text-align:center; transition:background 0.1s, transform 0.08s; -webkit-tap-highlight-color:transparent; }
+.pin-btn:active { background:var(--surface2); transform:scale(0.95); }
+.pin-btn.del { font-size:16px; color:var(--text2); }
+.pin-btn.empty { background:transparent; border-color:transparent; cursor:default; }
+.pin-shake { animation:pinshake 0.35s ease; }
+@keyframes pinshake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
 .hidden { display: none !important; }
 </style>
 </head>
 <body>
 
+<!-- ══ PIN SCREEN ══ -->
+<div id="pin-screen">
+  <div class="pin-logo">
+    <div class="pin-logo-box">
+      <svg viewBox="0 0 18 18" fill="none"><rect x="1" y="3" width="3" height="12" rx="1" fill="#1a0a00"/><rect x="5.5" y="3" width="1.5" height="12" rx="0.5" fill="#1a0a00"/><rect x="8.5" y="3" width="2.5" height="12" rx="1" fill="#1a0a00"/><rect x="12.5" y="3" width="1.5" height="12" rx="0.5" fill="#1a0a00"/><rect x="15" y="3" width="2" height="12" rx="1" fill="#1a0a00"/></svg>
+    </div>
+    <span class="logo-name">Pick<span>Scan</span></span>
+  </div>
+  <div class="pin-title">Enter PIN</div>
+  <div class="pin-sub">Warehouse access only</div>
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="pin-pad">
+    <button class="pin-btn" onclick="pinTap('1')">1</button>
+    <button class="pin-btn" onclick="pinTap('2')">2</button>
+    <button class="pin-btn" onclick="pinTap('3')">3</button>
+    <button class="pin-btn" onclick="pinTap('4')">4</button>
+    <button class="pin-btn" onclick="pinTap('5')">5</button>
+    <button class="pin-btn" onclick="pinTap('6')">6</button>
+    <button class="pin-btn" onclick="pinTap('7')">7</button>
+    <button class="pin-btn" onclick="pinTap('8')">8</button>
+    <button class="pin-btn" onclick="pinTap('9')">9</button>
+    <div class="pin-btn empty"></div>
+    <button class="pin-btn" onclick="pinTap('0')">0</button>
+    <button class="pin-btn del" onclick="pinDel()">⌫</button>
+  </div>
+</div>
+
 <!-- ══ SETUP ══ -->
-<div id="setup">
+<div id="setup" style="display:none">
   <div class="logo">
     <div class="logo-box">
       <svg viewBox="0 0 18 18" fill="none"><rect x="1" y="3" width="3" height="12" rx="1" fill="#1a0a00"/><rect x="5.5" y="3" width="1.5" height="12" rx="0.5" fill="#1a0a00"/><rect x="8.5" y="3" width="2.5" height="12" rx="1" fill="#1a0a00"/><rect x="12.5" y="3" width="1.5" height="12" rx="0.5" fill="#1a0a00"/><rect x="15" y="3" width="2" height="12" rx="1" fill="#1a0a00"/></svg>
@@ -197,13 +246,7 @@ select option { background: #1a1d27; }
   </div>
 
   <h1>Warehouse<br>Pick Scanner</h1>
-  <p class="sub">Scan a case barcode → matches SKU to your picklist → multiplies by case size → writes Units Picked.</p>
-
-  <div class="field">
-    <label>Google Apps Script URL</label>
-    <input type="url" id="script-url" placeholder="https://script.google.com/macros/s/.../exec" />
-    <p class="hint">Deploy the Apps Script file once → paste the URL here. Saved automatically.</p>
-  </div>
+  <p class="sub">Select your pick list and start scanning.</p>
 
   <div class="field">
     <label>Pick List Tab</label>
@@ -215,21 +258,6 @@ select option { background: #1a1d27; }
   </div>
 
   <button class="btn-go" onclick="startScanner()">Open Scanner →</button>
-  <div class="divider">or</div>
-  <button class="btn-demo" onclick="startDemo()">▶ Try Demo Mode (no sheet needed)</button>
-
-  <div class="schema-card">
-    <div class="schema-title">Your sheet column layout</div>
-    <div class="schema-row"><div class="col-letter">A</div><div class="col-name">Units Picked</div><div class="col-role write">← written by scanner</div></div>
-    <div class="schema-row"><div class="col-letter">B</div><div class="col-name">Pick Amount in Cases</div><div class="col-role">read</div></div>
-    <div class="schema-row"><div class="col-letter">C</div><div class="col-name">WH Inventory</div><div class="col-role">read</div></div>
-    <div class="schema-row"><div class="col-letter">D</div><div class="col-name">Case Size</div><div class="col-role write">read / filled in if blank</div></div>
-    <div class="schema-row"><div class="col-letter">E</div><div class="col-name">Item Name</div><div class="col-role">read</div></div>
-    <div class="schema-row"><div class="col-letter">F</div><div class="col-name">Variation</div><div class="col-role">read</div></div>
-    <div class="schema-row"><div class="col-letter">G</div><div class="col-name">SKU</div><div class="col-role">lookup key</div></div>
-    <div class="schema-row"><div class="col-letter">H</div><div class="col-name">Category</div><div class="col-role">read</div></div>
-    <div class="schema-row"><div class="col-letter">I</div><div class="col-name">Notes</div><div class="col-role">read</div></div>
-  </div>
 </div>
 
 <!-- ══ SCANNER ══ -->
@@ -244,6 +272,13 @@ select option { background: #1a1d27; }
 
   <div class="camera-wrap">
     <video id="preview" playsinline autoplay muted></video>
+    <div id="cam-start-overlay" style="position:absolute;inset:0;background:#0f1117;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;cursor:pointer;" onclick="startCamFromTap()">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(245,158,11,0.15);border:1.5px solid rgba(245,158,11,0.4);display:flex;align-items:center;justify-content:center;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </div>
+      <div style="font-size:15px;font-weight:600;color:#f1f5f9;">Tap to enable camera</div>
+      <div style="font-size:12px;color:#64748b;text-align:center;padding:0 32px;line-height:1.5;">Chrome requires a tap to request<br>camera permission</div>
+    </div>
     <div class="scan-overlay">
       <div class="scan-frame">
         <div class="sf-bl"></div>
@@ -379,7 +414,8 @@ const DEMO = {
   ]
 };
 
-let cfg = { scriptUrl:'', tab:'👃PF Pick List', demo:false };
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxUhIUb-e5dWK0-53BRSQYJVrxj9_aVDZ72bxUZVD8swQvQOQ1VM34sP1GlBWZ0mgN8/exec';
+let cfg = { scriptUrl: SCRIPT_URL, tab:'👃PF Pick List', demo:false };
 let appState = { scanning:true, lastCode:'', item:null, rowIndex:-1, log:[] };
 
 // ══ SETUP ══
@@ -389,9 +425,7 @@ function startDemo() {
   launch();
 }
 function startScanner() {
-  const url = document.getElementById('script-url').value.trim();
-  if (!url) { toast('Paste your Apps Script URL first','err'); return; }
-  cfg.scriptUrl = url;
+  cfg.scriptUrl = SCRIPT_URL;
   cfg.tab = document.getElementById('tab-select').value;
   cfg.demo = false;
   launch();
@@ -402,12 +436,26 @@ function launch() {
   sc.style.display = 'flex';
   document.getElementById('active-tab-label').textContent = cfg.tab;
   document.getElementById('scan-hint').textContent = cfg.tab + ' picklist active';
-  initCam();
+  // Don't auto-start camera — wait for user tap so Chrome shows permission prompt
 }
 
 // ══ CAMERA ══
+async function startCamFromTap() {
+  const overlay = document.getElementById('cam-start-overlay');
+  overlay.innerHTML = '<div style="font-size:13px;color:#94a3b8;">Starting camera…</div>';
+  await initCam();
+}
+
 async function initCam() {
+  const overlay = document.getElementById('cam-start-overlay');
   try {
+    // First request raw getUserMedia so Chrome shows the permission prompt
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    stream.getTracks().forEach(t => t.stop()); // release the test stream
+
+    // Now hide overlay and start ZXing
+    if (overlay) overlay.style.display = 'none';
+
     const reader = new ZXingBrowser.BrowserMultiFormatReader();
     const devices = await ZXingBrowser.BrowserCodeReader.listVideoInputDevices();
     const dev = devices.find(d => /back|rear|environment/i.test(d.label)) || devices[devices.length-1];
@@ -422,7 +470,8 @@ async function initCam() {
       }
     );
   } catch(e) {
-    document.getElementById('scan-hint').textContent = 'Camera unavailable — use manual entry';
+    if (overlay) overlay.innerHTML = '<div style="text-align:center;padding:0 24px"><div style="font-size:13px;color:#f87171;margin-bottom:8px;">Camera permission denied</div><div style="font-size:12px;color:#64748b;line-height:1.5;">Tap the lock icon in Chrome\'s address bar → Permissions → Camera → Allow, then reload.</div></div>';
+    document.getElementById('scan-hint').textContent = 'Camera blocked — use manual entry below';
   }
 }
 
@@ -636,15 +685,50 @@ function toast(msg, type='') {
 }
 function enc(s) { return encodeURIComponent(s); }
 function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+// ══ PIN ══
+const CORRECT_PIN = '1424';
+let pinEntry = '';
 
-// Restore script URL from localStorage if saved previously
-window.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('pickscan_url');
-  if (saved) document.getElementById('script-url').value = saved;
-});
-document.getElementById('script-url')?.addEventListener('change', e => {
-  localStorage.setItem('pickscan_url', e.target.value.trim());
-});
+function pinTap(digit) {
+  if (pinEntry.length >= 4) return;
+  pinEntry += digit;
+  updatePinDots();
+  if (pinEntry.length === 4) {
+    setTimeout(checkPin, 80);
+  }
+}
+
+function pinDel() {
+  pinEntry = pinEntry.slice(0, -1);
+  updatePinDots();
+}
+
+function updatePinDots(state) {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('pd' + i);
+    dot.className = 'pin-dot';
+    if (state === 'error') dot.classList.add('error');
+    else if (i < pinEntry.length) dot.classList.add('filled');
+  }
+}
+
+function checkPin() {
+  if (pinEntry === CORRECT_PIN) {
+    document.getElementById('pin-screen').style.display = 'none';
+    document.getElementById('setup').style.display = 'block';
+  } else {
+    updatePinDots('error');
+    document.getElementById('pin-dots').classList.add('pin-shake');
+    setTimeout(() => {
+      pinEntry = '';
+      updatePinDots();
+      document.getElementById('pin-dots').classList.remove('pin-shake');
+    }, 600);
+  }
+}
+
+
+// Script URL is hardcoded — no localStorage needed
 </script>
 </body>
 </html>

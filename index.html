@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Pick Scanner</title>
-<script src="https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js"></script>
 <style>
 :root {
   --bg: #0f1117;
@@ -448,48 +447,61 @@ async function startCamFromTap() {
 
 async function initCam() {
   const overlay = document.getElementById('cam-start-overlay');
+  const vid = document.getElementById('preview');
 
-  // Step 1 — getUserMedia triggers the Chrome permission prompt
+  // Step 1 — request camera stream directly (triggers permission prompt)
+  let stream;
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    stream.getTracks().forEach(t => t.stop());
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
   } catch(e) {
-    if (overlay) overlay.innerHTML = '<div style="text-align:center;padding:0 24px"><div style="font-size:13px;color:#f87171;margin-bottom:8px;">Camera permission denied</div><div style="font-size:12px;color:#64748b;line-height:1.5;">Tap the lock icon → Permissions → Camera → Allow, then reload.</div></div>';
+    if (overlay) overlay.innerHTML = '<div style="text-align:center;padding:0 24px"><div style="font-size:13px;color:#f87171;margin-bottom:8px;">Camera permission denied</div><div style="font-size:12px;color:#64748b;line-height:1.5;">Go to Chrome site settings for this URL → Camera → Allow, then reload.</div></div>';
     document.getElementById('scan-hint').textContent = 'Use manual entry below';
     return;
   }
 
-  // Step 2 — permission granted, hide overlay
+  // Step 2 — pipe stream into video element and play it
+  vid.srcObject = stream;
+  vid.style.display = 'block';
+  try { await vid.play(); } catch(e) {}
   if (overlay) overlay.style.display = 'none';
   document.getElementById('scan-hint').textContent = 'Point at barcode';
-  // Force video element to be visible and ready
-  const vid = document.getElementById('preview');
-  vid.style.display = 'block';
-  vid.style.width = '100%';
-  vid.style.height = '240px';
 
-  // Step 3 — start ZXing decoder
-  // The callback fires every frame — err here just means "no barcode visible yet", not a camera failure
-  try {
-    const reader = new ZXingBrowser.BrowserMultiFormatReader();
-    const devices = await ZXingBrowser.BrowserCodeReader.listVideoInputDevices();
-    const dev = devices.find(d => /back|rear|environment/i.test(d.label)) || devices[devices.length-1];
-    reader.decodeFromConstraints(
-      { video: { deviceId: dev?.deviceId, facingMode:'environment' } },
-      document.getElementById('preview'),
-      (res, err) => {
-        // err on every frame with no barcode is normal — only act on successful reads
-        if (res && appState.scanning) {
-          const code = res.getText();
-          if (code !== appState.lastCode) { appState.lastCode = code; handleScan(code); }
-        }
+  // Step 3 — scan using BarcodeDetector (native Android Chrome API) with canvas fallback
+  if ('BarcodeDetector' in window) {
+    const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code','data_matrix','itf'] });
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    let scanning = true;
+
+    async function scanFrame() {
+      if (!scanning || !appState.scanning) { requestAnimationFrame(scanFrame); return; }
+      if (vid.readyState >= 2 && vid.videoWidth > 0) {
+        canvas.width  = vid.videoWidth;
+        canvas.height = vid.videoHeight;
+        ctx.drawImage(vid, 0, 0);
+        try {
+          const barcodes = await detector.detect(canvas);
+          if (barcodes.length > 0) {
+            const code = barcodes[0].rawValue;
+            if (code && code !== appState.lastCode) {
+              appState.lastCode = code;
+              handleScan(code);
+              // Brief pause after successful scan so it doesn't re-trigger
+              scanning = false;
+              setTimeout(() => { scanning = true; }, 1500);
+            }
+          }
+        } catch(e) {}
       }
-    );
-  } catch(e) {
-    // Only flag genuine device errors, not routine ZXing startup noise
-    if (e && (e.name === 'NotAllowedError' || e.name === 'NotFoundError')) {
-      document.getElementById('scan-hint').textContent = 'Camera error — use manual entry below';
+      requestAnimationFrame(scanFrame);
     }
+    requestAnimationFrame(scanFrame);
+
+  } else {
+    // BarcodeDetector not available — show manual entry message
+    document.getElementById('scan-hint').textContent = 'Auto-scan unavailable — use manual entry below';
   }
 }
 

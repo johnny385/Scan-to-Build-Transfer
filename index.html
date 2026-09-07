@@ -450,6 +450,11 @@ tr.pl-active { background: rgba(245,158,11,0.1); outline: 1px solid var(--accent
     <div style="font-size:11px;color:var(--text3);margin-top:4px;">Edits save to column I when you confirm the pull.</div>
   </div>
 
+  <!-- Note-only mode banner -->
+  <div id="note-only-hint" class="hidden" style="background:var(--green-dim);border:1px solid var(--green-border);border-radius:var(--r-sm);padding:9px 12px;margin-bottom:12px;font-size:12px;color:var(--green);line-height:1.5;">
+    📝 Note-only mode — cases set to 0. Units Picked will not change. Only the note will be saved.
+  </div>
+
   <div class="qty-lbl">Cases to pull</div>
   <div class="qty-row">
     <button class="qty-btn" onclick="drawerAdj(-1)">−</button>
@@ -698,8 +703,8 @@ function renderTable() {
       <td style="text-align:center">
         <span class="pl-num ${done?'done':partial?'partial':'zero'}">${item.unitsPicked}</span>
       </td>
-      <td>
-        <div class="pl-check ${done?'done':partial?'partial':''}">
+      <td onclick="event.stopPropagation(); openDrawerNoteOnly(item)" style="cursor:pointer;">
+        <div class="pl-check ${done?'done':partial?'partial':''}" title="Tap to add note / mark without units">
           ${done ? '✓' : partial ? '~' : ''}
         </div>
       </td>`;
@@ -754,9 +759,34 @@ function openDrawer(item) {
   document.getElementById('d-notes').value = item.notes || '';
   drawerUpdateTotal();
 
+  // Clear note-only flag (set by openDrawerNoteOnly)
+  document.getElementById('drawer').dataset.noteOnly = 'false';
+  document.getElementById('d-confirm-lbl').innerHTML = '✓ Confirm Pull';
+  const hint = document.getElementById('note-only-hint');
+  if (hint) hint.classList.add('hidden');
+
   document.getElementById('drawer-backdrop').style.display = 'block';
   requestAnimationFrame(() => document.getElementById('drawer').classList.add('open'));
   highlightRow(item.sku);
+}
+
+// Note-only mode — opened by tapping the checkbox circle
+// Cases default to 0, units not required, just saves note
+function openDrawerNoteOnly(item) {
+  openDrawer(item);
+  // Override cases to 0 after drawer populates
+  setTimeout(() => {
+    document.getElementById('d-cases').value = 0;
+    document.getElementById('d-override').value = '';
+    drawerUpdateTotal();
+    // Mark drawer as note-only so confirm skips units validation
+    document.getElementById('drawer').dataset.noteOnly = 'true';
+    // Update confirm button label
+    document.getElementById('d-confirm-lbl').innerHTML = '📝 Save Note';
+    // Show hint
+    const hint = document.getElementById('note-only-hint');
+    if (hint) hint.classList.remove('hidden');
+  }, 50);
 }
 
 function closeDrawer() {
@@ -852,11 +882,18 @@ async function confirmPick() {
   // Get final units — override takes precedence over case calc
   const { units, source } = getFinalUnits();
 
-  if (units === null) {
-    showToast('Enter case size or a manual unit count first', 'err');
-    return;
+  const noteOnly = document.getElementById('drawer').dataset.noteOnly === 'true';
+
+  if (!noteOnly) {
+    if (units === null) {
+      showToast('Enter case size or a manual unit count first', 'err');
+      return;
+    }
+    if (units === 0) { showToast('Units is 0 — nothing to record', 'err'); return; }
   }
-  if (units === 0) { showToast('Units is 0 — nothing to record', 'err'); return; }
+
+  // In note-only mode, write 0 units (no change to Units Picked)
+  const unitsToWrite = (!noteOnly && units !== null) ? units : 0;
   const btn = document.getElementById('d-confirm-btn');
   const lbl = document.getElementById('d-confirm-lbl');
   btn.disabled = true;
@@ -867,18 +904,18 @@ async function confirmPick() {
     // Update local picklist
     const idx = picklist.findIndex(r => r.sku === item.sku);
     if (idx >= 0) {
-      picklist[idx].unitsPicked = (Number(picklist[idx].unitsPicked)||0) + units;
+      if (!noteOnly) picklist[idx].unitsPicked = (Number(picklist[idx].unitsPicked)||0) + unitsToWrite;
       if (!picklist[idx].caseSize && cs) picklist[idx].caseSize = cs;
       const noteVal = document.getElementById('d-notes').value.trim();
       if (noteVal !== '') picklist[idx].notes = noteVal;
     }
-    showToast(`✓ ${units} units logged`, 'ok');
+    showToast(noteOnly ? '📝 Note saved' : `✓ ${unitsToWrite} units logged`, 'ok');
   } else {
     try {
       const csParam   = cs ? `&caseSize=${cs}` : '';
       const noteVal   = document.getElementById('d-notes').value.trim();
       const noteParam = noteVal !== '' ? `&note=${enc(noteVal)}` : '';
-      const r = await fetch(`${cfg.scriptUrl}?action=write&row=${item.rowIndex}&units=${units}&sheet=${enc(cfg.tab)}${csParam}${noteParam}`);
+      const r = await fetch(`${cfg.scriptUrl}?action=write&row=${item.rowIndex}&units=${unitsToWrite}&sheet=${enc(cfg.tab)}${csParam}${noteParam}`);
       const d = await r.json();
       if (d.success) {
         const idx = picklist.findIndex(r => r.sku === item.sku);
@@ -888,7 +925,7 @@ async function confirmPick() {
           const noteVal = document.getElementById('d-notes').value.trim();
           if (noteVal !== '') picklist[idx].notes = noteVal;
         }
-        showToast(`✓ ${units} units saved`, 'ok');
+        showToast(noteOnly ? '📝 Note saved' : `✓ ${unitsToWrite} units saved`, 'ok');
       } else {
         showToast('Write failed: '+(d.reason||'unknown'), 'err');
       }
@@ -991,10 +1028,12 @@ async function handleScan(code) {
 // ══════════════════════════════════════════════════════
 function showRejected(code) {
   const el = document.getElementById('rejected-banner');
-  document.getElementById('rejected-txt').textContent = `"${code}" not on ${cfg.tab} — check the tab or add it to the sheet.`;
+  document.getElementById('rejected-txt').textContent = `⛔ "${code}" is not on the ${cfg.tab} — not picked.`;
   el.classList.remove('hidden');
-  // Scroll to top so banner is visible
-  document.getElementById('picklist-wrap').scrollTop = 0;
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  // Auto-dismiss after 4 seconds
+  clearTimeout(window._rejectTimer);
+  window._rejectTimer = setTimeout(hideRejected, 4000);
 }
 function hideRejected() {
   document.getElementById('rejected-banner').classList.add('hidden');

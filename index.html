@@ -212,6 +212,73 @@ select option { background: #1a1d27; }
 .scanner-dot.idle { background: var(--text3); box-shadow: none; animation: none; }
 .scanner-status-txt { color: var(--text2); }
 
+/* ── PICKLIST TABLE ── */
+.picklist-wrap { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.picklist-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 8px; gap: 10px; }
+.pl-progress { font-size: 12px; color: var(--text2); }
+.pl-progress strong { color: var(--green); }
+.pl-search { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); font-size: 13px; padding: 7px 11px; outline: none; width: 140px; }
+.pl-search:focus { border-color: var(--accent); }
+.pl-search::placeholder { color: var(--text3); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead { position: sticky; top: 0; z-index: 10; background: var(--surface2); }
+th { padding: 9px 10px; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text3); border-bottom: 1px solid var(--border); white-space: nowrap; }
+th:first-child { padding-left: 14px; }
+th:last-child { padding-right: 14px; text-align: center; }
+td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text); }
+td:first-child { padding-left: 14px; }
+td:last-child { padding-right: 14px; text-align: center; }
+tr.pl-row { transition: background 0.2s; cursor: pointer; }
+tr.pl-row:active { background: var(--surface2); }
+tr.pl-done { background: rgba(74,222,128,0.07); }
+tr.pl-done td { color: var(--text2); }
+tr.pl-done .pl-name { text-decoration: line-through; color: var(--text3); }
+tr.pl-active { background: rgba(245,158,11,0.1); outline: 1px solid var(--accent-border); }
+.pl-name { font-weight: 500; max-width: 200px; }
+.pl-variation { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.pl-sku-cell { font-family: monospace; font-size: 12px; color: var(--text2); white-space: nowrap; }
+.pl-num { font-size: 14px; font-weight: 600; }
+.pl-num.done { color: var(--green); }
+.pl-num.partial { color: var(--accent); }
+.pl-num.zero { color: var(--text3); }
+.pl-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--text3); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+.pl-check.done { background: var(--green); border-color: var(--green); color: #0a1a10; }
+.pl-check.partial { border-color: var(--accent); color: var(--accent); }
+.no-results { text-align: center; color: var(--text3); font-size: 13px; padding: 32px; }
+
+/* ── CONFIRM DRAWER ── */
+.drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; display: none; }
+.drawer { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px 18px 36px; z-index: 201; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.34,1.1,0.64,1); max-width: 540px; margin: 0 auto; }
+.drawer.open { transform: translateY(0); }
+.drawer-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 18px; }
+.drawer-item-name { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 3px; }
+.drawer-item-sub { font-size: 13px; color: var(--text2); margin-bottom: 14px; }
+.drawer-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.drawer-meta-box { background: var(--surface2); border-radius: var(--r-sm); padding: 9px 11px; }
+.drawer-meta-label { font-size: 10px; color: var(--text3); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+.drawer-meta-val { font-size: 18px; font-weight: 700; }
+.drawer-meta-val.amber { color: var(--accent); }
+.drawer-meta-val.muted { color: var(--text2); font-size: 14px; }
+.case-banner { background: var(--accent-dim); border: 1px solid var(--accent-border); border-radius: var(--r-sm); padding: 9px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+.case-banner-txt { font-size: 12px; color: var(--accent); flex: 1; }
+.case-size-inp { width: 70px; background: var(--surface); border: 1px solid var(--accent-border); border-radius: var(--r-sm); color: var(--text); font-size: 16px; font-weight: 700; padding: 7px 10px; text-align: center; outline: none; }
+.already-picked { background: var(--accent-dim); border: 1px solid var(--accent-border); border-radius: var(--r-sm); padding: 8px 11px; margin-bottom: 12px; font-size: 12px; color: var(--accent); }
+.qty-lbl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); margin-bottom: 7px; }
+.qty-row { display: flex; align-items: center; background: var(--surface2); border-radius: var(--r-sm); border: 1px solid var(--border); overflow: hidden; margin-bottom: 5px; }
+.qty-btn { width: 52px; height: 52px; background: transparent; border: none; color: var(--text); font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.qty-btn:active { background: var(--surface); }
+.qty-num { flex: 1; background: transparent; border: none; border-left: 1px solid var(--border); border-right: 1px solid var(--border); color: var(--text); font-size: 22px; font-weight: 700; text-align: center; padding: 10px; outline: none; }
+.total-lbl { font-size: 12px; color: var(--text3); text-align: center; margin-bottom: 14px; }
+.total-lbl strong { color: var(--text2); }
+.btn-confirm-drawer { width: 100%; background: var(--green); color: #0a1a10; border: none; border-radius: var(--r-sm); font-size: 16px; font-weight: 700; padding: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-confirm-drawer:active { opacity: 0.8; }
+.btn-confirm-drawer:disabled { opacity: 0.5; }
+.btn-cancel-drawer { width: 100%; background: transparent; border: 1px solid var(--border); color: var(--text2); border-radius: var(--r-sm); font-size: 14px; padding: 12px; cursor: pointer; margin-top: 8px; }
+.rejected-banner { background: var(--danger-dim); border: 1px solid var(--danger-border); border-radius: var(--r-sm); padding: 10px 14px; margin: 8px 14px; display: flex; align-items: center; gap: 10px; animation: fadein 0.2s ease; }
+@keyframes fadein { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+.rejected-txt { font-size: 13px; color: var(--danger); flex: 1; }
+.rejected-close { background: none; border: none; color: var(--danger); font-size: 18px; cursor: pointer; padding: 0 4px; }
+
 .hidden { display: none !important; }
 </style>
 </head>
@@ -297,454 +364,121 @@ select option { background: #1a1d27; }
     </div>
   </div>
 
-  <div class="panels">
+  <!-- Rejected flash banner -->
+  <div id="rejected-banner" class="rejected-banner hidden">
+    <div class="rejected-txt" id="rejected-txt"></div>
+    <button class="rejected-close" onclick="hideRejected()">×</button>
+  </div>
 
-    <!-- IDLE -->
-    <div class="card" id="st-idle">
-      <div class="idle-body">
-        <div class="idle-icon">📦</div>
-        <div class="idle-title">Ready to scan</div>
-        <div class="idle-sub">Scan a barcode with the Bluetooth scanner — it will look up the SKU and reject anything not on this tab's picklist.</div>
-        <div class="manual-row">
-          <input type="text" id="manual-input" placeholder="Type SKU or barcode…" />
-          <button class="btn-lookup" onclick="lookupManual()">Go</button>
-        </div>
-      </div>
+  <!-- Picklist table -->
+  <div class="picklist-wrap" id="picklist-wrap">
+    <div class="picklist-toolbar">
+      <div class="pl-progress" id="pl-progress">Loading…</div>
+      <input class="pl-search" id="pl-search" placeholder="Search…" oninput="renderTable()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
     </div>
+    <table id="pl-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>SKU</th>
+          <th style="text-align:center">Picked</th>
+          <th style="text-align:center">Target</th>
+          <th style="text-align:center">✓</th>
+        </tr>
+      </thead>
+      <tbody id="pl-body">
+        <tr><td colspan="5" class="no-results">Loading picklist…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
 
-    <!-- LOADING -->
-    <div class="card hidden" id="st-loading">
-      <div class="idle-body" style="padding:28px 14px">
-        <div style="font-size:13px;color:var(--text2)">Looking up…</div>
-      </div>
-    </div>
-
-    <!-- FOUND -->
-    <div class="card c-green hidden" id="st-found">
-      <div class="card-head">
-        <div class="dot dot-green"></div>
-        <div class="card-head-label">On this picklist</div>
-        <div class="scanned-code" id="f-code"></div>
-      </div>
-      <div class="card-body">
-        <div class="item-name" id="f-name"></div>
-        <div class="item-variation" id="f-variation"></div>
-        <div class="item-sku" id="f-sku"></div>
-
-        <!-- Case size missing banner -->
-        <div class="case-missing-banner hidden" id="case-missing-banner">
-          <div class="case-missing-text">Case size missing for this item.<br>Enter it below — we'll save it to the sheet.</div>
-          <input type="number" class="case-size-input" id="case-size-manual" placeholder="—" min="1" oninput="updateTotal()" />
-        </div>
-
-        <div class="meta-grid">
-          <div class="meta-box">
-            <div class="meta-label">Case Size</div>
-            <div class="meta-val amber" id="f-casesize">—</div>
-          </div>
-          <div class="meta-box">
-            <div class="meta-label">Pick (cases)</div>
-            <div class="meta-val muted" id="f-pickcases">—</div>
-          </div>
-          <div class="meta-box">
-            <div class="meta-label">WH Stock</div>
-            <div class="meta-val muted" id="f-stock">—</div>
-          </div>
-        </div>
-
-        <!-- Already picked warning -->
-        <div class="already-warn hidden" id="already-warn"></div>
-
-        <div class="qty-label-row">Cases pulled</div>
-        <div class="qty-row">
-          <button class="qty-btn" onclick="adj(-1)">−</button>
-          <input type="number" class="qty-num" id="cases-num" value="1" min="0" oninput="updateTotal()" />
-          <button class="qty-btn" onclick="adj(1)">+</button>
-        </div>
-        <div class="total-row" id="total-row">= <strong>0</strong> units written to Units Picked</div>
-
-        <button class="btn-confirm" id="btn-confirm" onclick="confirmPick()">
-          <span id="confirm-lbl">✓ Confirm Pull</span>
-        </button>
-        <button class="btn-secondary" onclick="resetIdle()">Cancel / scan different item</button>
-      </div>
-    </div>
-
-    <!-- REJECTED -->
-    <div class="card c-red hidden" id="st-rejected">
-      <div class="card-head">
-        <div class="dot dot-red"></div>
-        <div class="card-head-label" id="reject-head-label">Not on this picklist</div>
-      </div>
-      <div class="card-body">
-        <p class="reject-msg" id="reject-msg"></p>
-        <div class="reject-sku" id="reject-code"></div>
-        <button class="btn-scan-again" onclick="resetIdle()">↩ Scan again</button>
-      </div>
-    </div>
-
-    <!-- SESSION LOG -->
-    <div style="margin-top:6px">
-      <div class="log-header">
-        <div class="log-title-txt">This session</div>
-        <button class="btn-clear" onclick="clearLog()">Clear</button>
-      </div>
-      <div class="log-list" id="log-list">
-        <div class="log-empty" id="log-empty">No items picked yet</div>
-      </div>
-    </div>
-
-  </div><!-- /panels -->
+<!-- ══ CONFIRM DRAWER ══ -->
+<div class="drawer-backdrop" id="drawer-backdrop" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-item-name" id="d-name"></div>
+  <div class="drawer-item-sub" id="d-sub"></div>
+  <div class="drawer-meta">
+    <div class="drawer-meta-box"><div class="drawer-meta-label">Case Size</div><div class="drawer-meta-val amber" id="d-casesize">—</div></div>
+    <div class="drawer-meta-box"><div class="drawer-meta-label">Target Cases</div><div class="drawer-meta-val muted" id="d-target">—</div></div>
+    <div class="drawer-meta-box"><div class="drawer-meta-label">WH Stock</div><div class="drawer-meta-val muted" id="d-stock">—</div></div>
+  </div>
+  <div class="case-banner hidden" id="d-case-banner">
+    <div class="case-banner-txt">Case size missing — enter it below and we'll save it to the sheet.</div>
+    <input type="number" class="case-size-inp" id="d-case-inp" placeholder="—" min="1" oninput="drawerUpdateTotal()" />
+  </div>
+  <div class="already-picked hidden" id="d-already"></div>
+  <div class="qty-lbl">Cases to pull</div>
+  <div class="qty-row">
+    <button class="qty-btn" onclick="drawerAdj(-1)">−</button>
+    <input type="number" class="qty-num" id="d-cases" value="1" min="0" oninput="drawerUpdateTotal()" />
+    <button class="qty-btn" onclick="drawerAdj(1)">+</button>
+  </div>
+  <div class="total-lbl" id="d-total">= <strong>0</strong> units</div>
+  <button class="btn-confirm-drawer" id="d-confirm-btn" onclick="confirmPick()">
+    <span id="d-confirm-lbl">✓ Confirm Pull</span>
+  </button>
+  <button class="btn-cancel-drawer" onclick="closeDrawer()">Cancel</button>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-// ══ CONFIG ══
-const TABS = ['👃PF Pick List', '👃Grocery-Pick List', '👃Produce-Pick List A', '👃Produce-Pick List B'];
+// ══════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxUhIUb-e5dWK0-53BRSQYJVrxj9_aVDZ72bxUZVD8swQvQOQ1VM34sP1GlBWZ0mgN8/exec';
+const CORRECT_PIN = '1424';
+const TABS = ['👃PF Pick List','👃Grocery-Pick List','👃Produce-Pick List A','👃Produce-Pick List B'];
 
-// Column indices (0-based, matches your A-I layout, data starts row 5 per image)
-const C = { UNITS_PICKED:0, PICK_CASES:1, WH_INV:2, CASE_SIZE:3, NAME:4, VARIATION:5, SKU:6, CATEGORY:7, NOTES:8 };
-
-// Demo data — one set per tab
 const DEMO = {
   '👃PF Pick List': [
-    { sku:'BK1', name:'Veggie Quiche',    variation:'Regular Price',          caseSize:12, pickCases:1, whInv:18, unitsPicked:0 },
-    { sku:'SR1', name:'Sliced Roast Beef', variation:'Sliced Roast Beef (1/2 lb)', caseSize:25, pickCases:1, whInv:12, unitsPicked:0 },
+    { sku:'BK1', name:'Veggie Quiche',     variation:'Regular Price',               caseSize:12,   pickCases:1, whInv:18, unitsPicked:0, rowIndex:5 },
+    { sku:'SR1', name:'Sliced Roast Beef', variation:'Sliced Roast Beef (1/2 lb)',  caseSize:25,   pickCases:1, whInv:12, unitsPicked:0, rowIndex:6 },
   ],
   '👃Grocery-Pick List': [
-    { sku:'39978025784', name:"Bob's Red Mill Coconut, Shredded, Unsweetened, 12oz", variation:'Regular', caseSize:4,    pickCases:1, whInv:4,  unitsPicked:0 },
-    { sku:'39978033918', name:"Bob's Red Mill Gluten-Free Baking Soda, 16oz",        variation:'Regular', caseSize:4,    pickCases:1, whInv:20, unitsPicked:0 },
-    { sku:'71012120505', name:'King Arthur Sir Galahad Flour, Bulk/Wholesale, 50lb',  variation:'Regular', caseSize:1,    pickCases:2, whInv:3,  unitsPicked:0 },
-    { sku:'85480000001', name:'Full Fat Organic Vanilla Yogurt, 24oz',                variation:'Regular', caseSize:null, pickCases:3, whInv:12, unitsPicked:0 },
+    { sku:'39978025784', name:"Bob's Red Mill Coconut, Shredded 12oz",  variation:'Regular', caseSize:4,    pickCases:1, whInv:4,  unitsPicked:0, rowIndex:5 },
+    { sku:'39978033918', name:"Bob's Red Mill GF Baking Soda 16oz",     variation:'Regular', caseSize:4,    pickCases:1, whInv:20, unitsPicked:0, rowIndex:6 },
+    { sku:'71012120505', name:'King Arthur Galahad Flour 50lb',          variation:'Regular', caseSize:1,    pickCases:2, whInv:3,  unitsPicked:0, rowIndex:7 },
+    { sku:'85480000001', name:'Full Fat Organic Vanilla Yogurt 24oz',    variation:'Regular', caseSize:null, pickCases:3, whInv:12, unitsPicked:0, rowIndex:8 },
   ],
   '👃Produce-Pick List A': [
-    { sku:'33383000101', name:'Organic Baby Spinach, 5oz',    variation:'Regular', caseSize:12, pickCases:2, whInv:24, unitsPicked:0 },
-    { sku:'11110874318', name:'Roma Tomatoes, 25lb Case',     variation:'Regular', caseSize:1,  pickCases:4, whInv:8,  unitsPicked:0 },
+    { sku:'33383000101', name:'Organic Baby Spinach 5oz',  variation:'Regular', caseSize:12, pickCases:2, whInv:24, unitsPicked:0, rowIndex:5 },
+    { sku:'11110874318', name:'Roma Tomatoes 25lb Case',   variation:'Regular', caseSize:1,  pickCases:4, whInv:8,  unitsPicked:0, rowIndex:6 },
   ],
   '👃Produce-Pick List B': [
-    { sku:'33000157700', name:'Organic Fuji Apples, 3lb bag', variation:'Regular', caseSize:8,  pickCases:3, whInv:16, unitsPicked:0 },
-    { sku:'94011000000', name:'Organic Bananas',               variation:'Regular', caseSize:null, pickCases:5, whInv:40, unitsPicked:0 },
+    { sku:'33000157700', name:'Organic Fuji Apples 3lb',   variation:'Regular', caseSize:8,    pickCases:3, whInv:16, unitsPicked:0, rowIndex:5 },
+    { sku:'94011000000', name:'Organic Bananas',            variation:'Regular', caseSize:null, pickCases:5, whInv:40, unitsPicked:0, rowIndex:6 },
   ]
 };
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxUhIUb-e5dWK0-53BRSQYJVrxj9_aVDZ72bxUZVD8swQvQOQ1VM34sP1GlBWZ0mgN8/exec';
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
 let cfg = { scriptUrl: SCRIPT_URL, tab:'👃Grocery-Pick List', demo:false };
-let appState = { scanning:true, lastCode:'', item:null, rowIndex:-1, log:[] };
-
-// ══ SETUP ══
-function startDemo() {
-  cfg.demo = true;
-  cfg.tab  = document.getElementById('tab-select').value;
-  launch();
-}
-function startScanner() {
-  cfg.scriptUrl = SCRIPT_URL;
-  cfg.tab = document.getElementById('tab-select').value;
-  cfg.demo = false;
-  launch();
-}
-function launch() {
-  document.getElementById('setup').style.display = 'none';
-  const sc = document.getElementById('scanner');
-  sc.style.display = 'flex';
-  document.getElementById('active-tab-label').textContent = cfg.tab;
-  // Auto-focus scanner input — Bluetooth scanner is ready immediately
-  setTimeout(initScanner, 100);
-}
-
-// ══ BLUETOOTH SCANNER INPUT ══
-function initScanner() {
-  const input = document.getElementById('scanner-input');
-  const dot   = document.getElementById('scanner-dot');
-  const txt   = document.getElementById('scanner-status-txt');
-
-  // Focus the input so scanner keystrokes land here immediately
-  input.focus();
-
-  // Bluetooth scanners send the barcode as rapid keystrokes ending in Enter
-  // We detect this by measuring typing speed — scanners type much faster than humans
-  let buffer = '';
-  let lastKey = 0;
-  const SCANNER_SPEED_MS = 50; // scanners type a char every ~5-10ms; humans ~200ms+
-
-  input.addEventListener('keydown', e => {
-    const now = Date.now();
-
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const code = buffer.trim() || input.value.trim();
-      buffer = '';
-      input.value = '';
-      if (code && appState.scanning) {
-        // Flash the dot
-        dot.classList.remove('idle');
-        txt.textContent = 'Scanning: ' + code;
-        appState.lastCode = code;
-        handleScan(code);
-        setTimeout(() => { txt.textContent = 'Ready — scan a barcode or type a SKU and press Enter'; }, 1500);
-      }
-      return;
-    }
-
-    // Build buffer for speed detection
-    if (now - lastKey < SCANNER_SPEED_MS && e.key.length === 1) {
-      buffer += e.key;
-    } else {
-      buffer = e.key.length === 1 ? e.key : '';
-    }
-    lastKey = now;
-  });
-
-  // Re-focus if user taps elsewhere (keeps scanner input always active)
-  document.addEventListener('click', e => {
-    if (e.target !== input) input.focus();
-  });
-
-  // Visual idle/active state
-  input.addEventListener('focus', () => { dot.classList.remove('idle'); });
-  input.addEventListener('blur',  () => { dot.classList.add('idle'); txt.textContent = 'Tap here to re-activate scanner'; });
-}
-
-// ══ SCAN / LOOKUP ══
-async function handleScan(code) {
-  appState.scanning = false;
-  showSt('loading');
-  await lookup(code);
-}
-function lookupManual() {
-  const v = document.getElementById('manual-input').value.trim();
-  if (!v) return;
-  appState.lastCode = v;
-  showSt('loading');
-  lookup(v);
-}
-async function lookup(code) {
-  let result = null;
-  if (cfg.demo) {
-    await sleep(500);
-    const list = DEMO[cfg.tab] || [];
-    // match by SKU or treat code as SKU directly
-    const idx = list.findIndex(r => r.sku === code);
-    if (idx >= 0) result = { found:true, item: list[idx], rowIndex: idx+2 };
-    else result = { found:false };
-  } else {
-    try {
-      const r = await fetch(`${cfg.scriptUrl}?action=lookup&code=${enc(code)}&sheet=${enc(cfg.tab)}`);
-      result = await r.json();
-    } catch(e) { toast('Network error','err'); resetIdle(); return; }
-  }
-  if (result.found) showFound(result.item, result.rowIndex, code);
-  else showRejected(code);
-}
-
-// ══ FOUND STATE ══
-function showFound(item, rowIndex, code) {
-  appState.item = item;
-  appState.rowIndex = rowIndex;
-
-  document.getElementById('f-code').textContent = code;
-  document.getElementById('f-name').textContent = item.name || '';
-  document.getElementById('f-variation').textContent = item.variation || '';
-  document.getElementById('f-sku').textContent = 'SKU: ' + (item.sku || '');
-  document.getElementById('f-pickcases').textContent = item.pickCases ?? '—';
-  document.getElementById('f-stock').textContent = item.whInv ?? '—';
-
-  const hasCaseSize = item.caseSize && Number(item.caseSize) > 0;
-  document.getElementById('f-casesize').textContent = hasCaseSize ? item.caseSize : '—';
-
-  // Show manual case size input if missing
-  const banner = document.getElementById('case-missing-banner');
-  const csInput = document.getElementById('case-size-manual');
-  if (!hasCaseSize) {
-    banner.classList.remove('hidden');
-    csInput.value = '';
-  } else {
-    banner.classList.add('hidden');
-    csInput.value = '';
-  }
-
-  // Already picked warning
-  const warnEl = document.getElementById('already-warn');
-  if (item.unitsPicked && Number(item.unitsPicked) > 0) {
-    warnEl.classList.remove('hidden');
-    warnEl.textContent = `⚠ ${item.unitsPicked} units already recorded for this item — new entry will add to that total.`;
-  } else {
-    warnEl.classList.add('hidden');
-  }
-
-  // Default cases to Pick Amount in Cases if available
-  const defaultCases = item.pickCases && Number(item.pickCases) > 0 ? Number(item.pickCases) : 1;
-  document.getElementById('cases-num').value = defaultCases;
-  updateTotal();
-  showSt('found');
-}
-
-// ══ REJECTED ══
-function showRejected(code) {
-  document.getElementById('reject-head-label').textContent = 'Not on ' + cfg.tab + ' picklist';
-  document.getElementById('reject-msg').textContent = 'This barcode/SKU is not in the ' + cfg.tab + ' picklist. Switch tabs if needed, or add it to the sheet.';
-  document.getElementById('reject-code').textContent = code;
-  showSt('rejected');
-  appState.scanning = true;
-}
-
-// ══ QTY ══
-function adj(delta) {
-  const el = document.getElementById('cases-num');
-  el.value = Math.max(0, (parseInt(el.value)||0) + delta);
-  updateTotal();
-}
-function updateTotal() {
-  const item = appState.item;
-  if (!item) return;
-  const cases = parseInt(document.getElementById('cases-num').value) || 0;
-
-  // resolve case size: from item, or from manual input if missing
-  let cs = item.caseSize && Number(item.caseSize) > 0 ? Number(item.caseSize) : null;
-  if (!cs) {
-    const manVal = parseInt(document.getElementById('case-size-manual').value);
-    if (manVal > 0) cs = manVal;
-  }
-
-  const units = cs ? cases * cs : null;
-  const row = document.getElementById('total-row');
-  if (units !== null) {
-    row.innerHTML = `= <strong>${units} units</strong> written to Units Picked`;
-  } else {
-    row.innerHTML = `<span style="color:var(--accent)">Enter case size above to calculate units</span>`;
-  }
-}
-
-// ══ CONFIRM ══
-async function confirmPick() {
-  const item = appState.item;
-  if (!item) return;
-
-  const cases = parseInt(document.getElementById('cases-num').value) || 0;
-  let cs = item.caseSize && Number(item.caseSize) > 0 ? Number(item.caseSize) : null;
-  if (!cs) {
-    const manVal = parseInt(document.getElementById('case-size-manual').value);
-    if (manVal > 0) cs = manVal;
-  }
-  if (!cs) { toast('Enter case size first','err'); return; }
-  if (cases === 0) { toast('Cases pulled is 0 — nothing to record','err'); return; }
-
-  const units = cases * cs;
-  const rowIndex = appState.rowIndex;
-
-  const btn = document.getElementById('btn-confirm');
-  const lbl = document.getElementById('confirm-lbl');
-  btn.disabled = true;
-  lbl.innerHTML = '<span class="spinner"></span>';
-
-  const logEntry = { id:Date.now(), name:item.name, sku:item.sku, cases, units, status:'pending' };
-  appState.log.unshift(logEntry);
-  updateBadge(); renderLog();
-
-  if (cfg.demo) {
-    await sleep(700);
-    // update demo data in memory
-    const list = DEMO[cfg.tab];
-    const idx = list.findIndex(r => r.sku === item.sku);
-    if (idx >= 0) {
-      list[idx].unitsPicked = (Number(list[idx].unitsPicked)||0) + units;
-      if (!list[idx].caseSize && cs) list[idx].caseSize = cs;
-    }
-    logEntry.status = 'synced';
-    toast(`✓ ${units} units logged`, 'ok');
-  } else {
-    try {
-      const csParam = cs ? `&caseSize=${cs}` : '';
-      const r = await fetch(`${cfg.scriptUrl}?action=write&row=${rowIndex}&units=${units}&sheet=${enc(cfg.tab)}${csParam}`);
-      const d = await r.json();
-      if (d.success) { logEntry.status='synced'; toast(`✓ ${units} units saved`,'ok'); }
-      else { logEntry.status='failed'; toast('Write failed: '+(d.reason||'unknown'),'err'); }
-    } catch(e) { logEntry.status='failed'; toast('Network error','err'); }
-  }
-
-  renderLog();
-  btn.disabled = false;
-  lbl.innerHTML = '✓ Confirm Pull';
-  resetIdle();
-}
-
-// ══ UI HELPERS ══
-function showSt(s) {
-  ['idle','loading','found','rejected'].forEach(id => {
-    document.getElementById('st-'+id).classList.toggle('hidden', id !== s);
-  });
-}
-function resetIdle() {
-  appState.item = null; appState.lastCode = ''; appState.rowIndex = -1; appState.scanning = true;
-  document.getElementById('manual-input').value = '';
-  showSt('idle');
-  // Re-focus scanner input so next scan is captured immediately
-  setTimeout(() => { const el = document.getElementById('scanner-input'); if(el) el.focus(); }, 100);
-}
-function updateBadge() {
-  const n = appState.log.filter(e=>e.status!=='failed').length;
-  document.getElementById('count-badge').textContent = n + ' picked';
-}
-function renderLog() {
-  const list = document.getElementById('log-list');
-  const empty = document.getElementById('log-empty');
-  list.querySelectorAll('.log-item').forEach(el=>el.remove());
-  if (appState.log.length === 0) { empty.classList.remove('hidden'); return; }
-  empty.classList.add('hidden');
-  appState.log.forEach(e => {
-    const el = document.createElement('div');
-    el.className = `log-item ${e.status}`;
-    el.innerHTML = `
-      <div class="log-left">
-        <div class="li-name">${e.name}</div>
-        <div class="li-meta">${e.sku} · ${e.cases} case${e.cases!==1?'s':''}</div>
-      </div>
-      <div class="log-right">
-        <div class="li-units">${e.units} units</div>
-        <div class="li-status ${e.status}">${e.status==='synced'?'✓ synced':e.status==='failed'?'✗ failed':'⏳ pending'}</div>
-      </div>`;
-    list.appendChild(el);
-  });
-}
-function clearLog() { appState.log=[]; updateBadge(); renderLog(); }
-
-let _tt;
-function toast(msg, type='') {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.className = `toast ${type}`;
-  clearTimeout(_tt);
-  requestAnimationFrame(()=>{ t.classList.add('show'); _tt=setTimeout(()=>t.classList.remove('show'),2600); });
-}
-function enc(s) { return encodeURIComponent(s); }
-function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
-// ══ PIN ══
-const CORRECT_PIN = '1424';
+let picklist = [];       // loaded items for current tab
+let activeItem = null;   // item currently in confirm drawer
 let pinEntry = '';
 
+// ══════════════════════════════════════════════════════
+// PIN
+// ══════════════════════════════════════════════════════
 function pinTap(digit) {
   if (pinEntry.length >= 4) return;
   pinEntry += digit;
   updatePinDots();
-  if (pinEntry.length === 4) {
-    setTimeout(checkPin, 80);
-  }
+  if (pinEntry.length === 4) setTimeout(checkPin, 80);
 }
-
-function pinDel() {
-  pinEntry = pinEntry.slice(0, -1);
-  updatePinDots();
-}
-
+function pinDel() { pinEntry = pinEntry.slice(0,-1); updatePinDots(); }
 function updatePinDots(state) {
-  for (let i = 0; i < 4; i++) {
-    const dot = document.getElementById('pd' + i);
-    dot.className = 'pin-dot';
-    if (state === 'error') dot.classList.add('error');
-    else if (i < pinEntry.length) dot.classList.add('filled');
+  for (let i=0;i<4;i++) {
+    const d = document.getElementById('pd'+i);
+    d.className = 'pin-dot';
+    if (state==='error') d.classList.add('error');
+    else if (i < pinEntry.length) d.classList.add('filled');
   }
 }
-
 function checkPin() {
   if (pinEntry === CORRECT_PIN) {
     document.getElementById('pin-screen').style.display = 'none';
@@ -752,16 +486,322 @@ function checkPin() {
   } else {
     updatePinDots('error');
     document.getElementById('pin-dots').classList.add('pin-shake');
-    setTimeout(() => {
-      pinEntry = '';
-      updatePinDots();
-      document.getElementById('pin-dots').classList.remove('pin-shake');
-    }, 600);
+    setTimeout(() => { pinEntry=''; updatePinDots(); document.getElementById('pin-dots').classList.remove('pin-shake'); }, 600);
   }
 }
 
+// ══════════════════════════════════════════════════════
+// SETUP → LAUNCH
+// ══════════════════════════════════════════════════════
+function startScanner() {
+  cfg.tab  = document.getElementById('tab-select').value;
+  cfg.demo = false;
+  launch();
+}
+function startDemo() {
+  cfg.tab  = document.getElementById('tab-select').value;
+  cfg.demo = true;
+  launch();
+}
 
-// Script URL is hardcoded — no localStorage needed
+async function launch() {
+  document.getElementById('setup').style.display = 'none';
+  const sc = document.getElementById('scanner');
+  sc.style.display = 'flex';
+  document.getElementById('active-tab-label').textContent = cfg.tab;
+  await loadPicklist();
+  setTimeout(initScanner, 100);
+}
+
+// ══════════════════════════════════════════════════════
+// LOAD PICKLIST FROM SHEET
+// ══════════════════════════════════════════════════════
+async function loadPicklist() {
+  document.getElementById('pl-body').innerHTML = '<tr><td colspan="5" class="no-results">Loading picklist…</td></tr>';
+  document.getElementById('pl-progress').textContent = 'Loading…';
+
+  if (cfg.demo) {
+    await sleep(400);
+    picklist = JSON.parse(JSON.stringify(DEMO[cfg.tab] || []));
+  } else {
+    try {
+      const url = `${cfg.scriptUrl}?action=list&sheet=${enc(cfg.tab)}`;
+      const res  = await fetch(url);
+      const data = await res.json();
+      if (data.items) {
+        picklist = data.items;
+      } else {
+        showToast('Could not load picklist: ' + (data.error||'unknown'), 'err');
+        picklist = [];
+      }
+    } catch(e) {
+      showToast('Network error loading picklist', 'err');
+      picklist = [];
+    }
+  }
+  renderTable();
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER TABLE
+// ══════════════════════════════════════════════════════
+function renderTable() {
+  const search = (document.getElementById('pl-search').value || '').toLowerCase();
+  const tbody  = document.getElementById('pl-body');
+
+  // Sort: incomplete first, done at bottom
+  const sorted = [...picklist].sort((a,b) => {
+    const aDone = isDone(a), bDone = isDone(b);
+    if (aDone !== bDone) return aDone ? 1 : -1;
+    return 0;
+  });
+
+  // Filter by search
+  const filtered = search
+    ? sorted.filter(it => it.name.toLowerCase().includes(search) || String(it.sku).toLowerCase().includes(search) || (it.variation||'').toLowerCase().includes(search))
+    : sorted;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="no-results">No items found</td></tr>';
+    updateProgress();
+    return;
+  }
+
+  tbody.innerHTML = '';
+  filtered.forEach(item => {
+    const done    = isDone(item);
+    const partial = item.unitsPicked > 0 && !done;
+    const target  = targetUnits(item);
+    const tr = document.createElement('tr');
+    tr.className = 'pl-row' + (done ? ' pl-done' : '') + (activeItem && activeItem.sku === item.sku ? ' pl-active' : '');
+    tr.dataset.sku = item.sku;
+    tr.onclick = () => openDrawer(item);
+    tr.innerHTML = `
+      <td>
+        <div class="pl-name">${item.name}</div>
+        <div class="pl-variation">${item.variation || ''}</div>
+      </td>
+      <td class="pl-sku-cell">${item.sku}</td>
+      <td style="text-align:center">
+        <span class="pl-num ${done?'done':partial?'partial':'zero'}">${item.unitsPicked}</span>
+      </td>
+      <td style="text-align:center">
+        <span class="pl-num muted" style="color:var(--text2)">${target !== null ? target : '—'}</span>
+      </td>
+      <td>
+        <div class="pl-check ${done?'done':partial?'partial':''}">
+          ${done ? '✓' : partial ? '~' : ''}
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  updateProgress();
+}
+
+function isDone(item) {
+  const target = targetUnits(item);
+  return target !== null && item.unitsPicked >= target;
+}
+function targetUnits(item) {
+  if (!item.caseSize || !item.pickCases) return null;
+  return item.caseSize * item.pickCases;
+}
+function updateProgress() {
+  const done  = picklist.filter(isDone).length;
+  const total = picklist.length;
+  document.getElementById('pl-progress').innerHTML = `<strong>${done}</strong> of ${total} complete`;
+  document.getElementById('count-badge').textContent = done + '/' + total + ' done';
+}
+
+// ══════════════════════════════════════════════════════
+// DRAWER — open / confirm / close
+// ══════════════════════════════════════════════════════
+function openDrawer(item) {
+  activeItem = item;
+  document.getElementById('d-name').textContent  = item.name;
+  document.getElementById('d-sub').textContent   = (item.variation || '') + ' · SKU: ' + item.sku;
+  document.getElementById('d-stock').textContent = item.whInv ?? '—';
+  document.getElementById('d-target').textContent = item.pickCases ?? '—';
+
+  const hasCS = item.caseSize && Number(item.caseSize) > 0;
+  document.getElementById('d-casesize').textContent = hasCS ? item.caseSize : '—';
+  const banner = document.getElementById('d-case-banner');
+  const csInp  = document.getElementById('d-case-inp');
+  if (!hasCS) { banner.classList.remove('hidden'); csInp.value = ''; }
+  else        { banner.classList.add('hidden'); }
+
+  const alreadyEl = document.getElementById('d-already');
+  if (item.unitsPicked > 0) {
+    alreadyEl.classList.remove('hidden');
+    alreadyEl.textContent = `⚠ ${item.unitsPicked} units already recorded — new entry adds to that.`;
+  } else { alreadyEl.classList.add('hidden'); }
+
+  const defaultCases = item.pickCases && Number(item.pickCases) > 0 ? Number(item.pickCases) : 1;
+  document.getElementById('d-cases').value = defaultCases;
+  drawerUpdateTotal();
+
+  document.getElementById('drawer-backdrop').style.display = 'block';
+  requestAnimationFrame(() => document.getElementById('drawer').classList.add('open'));
+  highlightRow(item.sku);
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-backdrop').style.display = 'none';
+  activeItem = null;
+  renderTable();
+  setTimeout(() => { const el = document.getElementById('scanner-input'); if(el) el.focus(); }, 300);
+}
+
+function drawerAdj(delta) {
+  const el = document.getElementById('d-cases');
+  el.value = Math.max(0, (parseInt(el.value)||0) + delta);
+  drawerUpdateTotal();
+}
+
+function drawerUpdateTotal() {
+  const item = activeItem; if (!item) return;
+  const cases = parseInt(document.getElementById('d-cases').value) || 0;
+  let cs = item.caseSize && Number(item.caseSize) > 0 ? Number(item.caseSize) : null;
+  if (!cs) { const v = parseInt(document.getElementById('d-case-inp').value); if(v>0) cs=v; }
+  const units = cs ? cases * cs : null;
+  document.getElementById('d-total').innerHTML = units !== null
+    ? `= <strong>${units} units</strong>`
+    : `<span style="color:var(--accent)">Enter case size to calculate</span>`;
+}
+
+async function confirmPick() {
+  const item = activeItem; if (!item) return;
+  const cases = parseInt(document.getElementById('d-cases').value) || 0;
+  let cs = item.caseSize && Number(item.caseSize) > 0 ? Number(item.caseSize) : null;
+  if (!cs) { const v = parseInt(document.getElementById('d-case-inp').value); if(v>0) cs=v; }
+  if (!cs) { showToast('Enter case size first','err'); return; }
+  if (cases === 0) { showToast('Cases is 0 — nothing to record','err'); return; }
+
+  const units = cases * cs;
+  const btn = document.getElementById('d-confirm-btn');
+  const lbl = document.getElementById('d-confirm-lbl');
+  btn.disabled = true;
+  lbl.innerHTML = '<span class="spinner"></span>';
+
+  if (cfg.demo) {
+    await sleep(600);
+    // Update local picklist
+    const idx = picklist.findIndex(r => r.sku === item.sku);
+    if (idx >= 0) {
+      picklist[idx].unitsPicked = (Number(picklist[idx].unitsPicked)||0) + units;
+      if (!picklist[idx].caseSize && cs) picklist[idx].caseSize = cs;
+    }
+    showToast(`✓ ${units} units logged`, 'ok');
+  } else {
+    try {
+      const csParam = cs ? `&caseSize=${cs}` : '';
+      const r = await fetch(`${cfg.scriptUrl}?action=write&row=${item.rowIndex}&units=${units}&sheet=${enc(cfg.tab)}${csParam}`);
+      const d = await r.json();
+      if (d.success) {
+        const idx = picklist.findIndex(r => r.sku === item.sku);
+        if (idx >= 0) {
+          picklist[idx].unitsPicked = d.newTotal;
+          if (!picklist[idx].caseSize && cs) picklist[idx].caseSize = cs;
+        }
+        showToast(`✓ ${units} units saved`, 'ok');
+      } else {
+        showToast('Write failed: '+(d.reason||'unknown'), 'err');
+      }
+    } catch(e) { showToast('Network error', 'err'); }
+  }
+
+  btn.disabled = false;
+  lbl.innerHTML = '✓ Confirm Pull';
+  closeDrawer();
+}
+
+// ══════════════════════════════════════════════════════
+// BLUETOOTH SCANNER INPUT
+// ══════════════════════════════════════════════════════
+function initScanner() {
+  const input = document.getElementById('scanner-input');
+  const dot   = document.getElementById('scanner-dot');
+  const txt   = document.getElementById('scanner-status-txt');
+  input.focus();
+
+  let buffer = '', lastKey = 0;
+  const SPEED = 50;
+
+  input.addEventListener('keydown', e => {
+    const now = Date.now();
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const code = buffer.trim() || input.value.trim();
+      buffer = ''; input.value = '';
+      if (code) {
+        txt.textContent = 'Scanning: ' + code;
+        handleScan(code);
+        setTimeout(() => { txt.textContent = 'Ready — scan a barcode or type a SKU and press Enter'; }, 1500);
+      }
+      return;
+    }
+    if (now - lastKey < SPEED && e.key.length === 1) buffer += e.key;
+    else buffer = e.key.length === 1 ? e.key : '';
+    lastKey = now;
+  });
+
+  document.addEventListener('click', e => {
+    if (!document.getElementById('drawer').classList.contains('open') &&
+        e.target !== input) input.focus();
+  });
+
+  input.addEventListener('blur',  () => { dot.classList.add('idle'); txt.textContent = 'Tap here to re-activate scanner'; });
+  input.addEventListener('focus', () => { dot.classList.remove('idle'); });
+}
+
+// ══════════════════════════════════════════════════════
+// SCAN HANDLER
+// ══════════════════════════════════════════════════════
+async function handleScan(code) {
+  const item = picklist.find(r => String(r.sku).trim() === String(code).trim());
+  if (item) {
+    hideRejected();
+    openDrawer(item);
+  } else {
+    showRejected(code);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// REJECTED BANNER
+// ══════════════════════════════════════════════════════
+function showRejected(code) {
+  const el = document.getElementById('rejected-banner');
+  document.getElementById('rejected-txt').textContent = `"${code}" not on ${cfg.tab} — check the tab or add it to the sheet.`;
+  el.classList.remove('hidden');
+  // Scroll to top so banner is visible
+  document.getElementById('picklist-wrap').scrollTop = 0;
+}
+function hideRejected() {
+  document.getElementById('rejected-banner').classList.add('hidden');
+}
+
+// ══════════════════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════════════════
+function highlightRow(sku) {
+  document.querySelectorAll('.pl-row').forEach(r => r.classList.remove('pl-active'));
+  const row = document.querySelector(`tr[data-sku="${sku}"]`);
+  if (row) { row.classList.add('pl-active'); row.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
+}
+
+let _tt;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type}`;
+  clearTimeout(_tt);
+  requestAnimationFrame(()=>{ t.classList.add('show'); _tt=setTimeout(()=>t.classList.remove('show'),2600); });
+}
+function enc(s) { return encodeURIComponent(s); }
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+function spinner() { return '<span class="spinner"></span>'; }
 </script>
 </body>
 </html>

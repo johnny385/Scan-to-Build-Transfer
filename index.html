@@ -266,7 +266,8 @@ select option { background: #1a1d27; }
     <select id="tab-select">
       <option value="👃PF Pick List">👃PF Pick List</option>
       <option value="👃Grocery-Pick List">👃Grocery-Pick List</option>
-      <option value="👃Produce-Pick List">👃Produce-Pick List</option>
+      <option value="👃Produce-Pick List A">👃Produce-Pick List A</option>
+      <option value="👃Produce-Pick List B">👃Produce-Pick List B</option>
     </select>
   </div>
 
@@ -277,7 +278,7 @@ select option { background: #1a1d27; }
 <div id="scanner">
   <div class="s-header">
     <div class="s-header-left">
-      <div class="tab-pill" id="active-tab-label">👃PF Pick List</div>
+      <div class="tab-pill" id="active-tab-label">👃Grocery-Pick List</div>
       <div class="s-title">Pick Scanner</div>
     </div>
     <div class="count-badge" id="count-badge">0 picked</div>
@@ -400,7 +401,7 @@ select option { background: #1a1d27; }
 
 <script>
 // ══ CONFIG ══
-const TABS = ['👃PF Pick List', '👃Grocery-Pick List', '👃Produce-Pick List'];
+const TABS = ['👃PF Pick List', '👃Grocery-Pick List', '👃Produce-Pick List A', '👃Produce-Pick List B'];
 
 // Column indices (0-based, matches your A-I layout, data starts row 5 per image)
 const C = { UNITS_PICKED:0, PICK_CASES:1, WH_INV:2, CASE_SIZE:3, NAME:4, VARIATION:5, SKU:6, CATEGORY:7, NOTES:8 };
@@ -408,22 +409,27 @@ const C = { UNITS_PICKED:0, PICK_CASES:1, WH_INV:2, CASE_SIZE:3, NAME:4, VARIATI
 // Demo data — one set per tab
 const DEMO = {
   '👃PF Pick List': [
-    { sku:'V840642', name:'Chicken Eggs', variation:'Boggs Cattle Farm', caseSize:null, pickCases:2, whInv:30, unitsPicked:0 },
-    { sku:'BEV-019', name:'Orange Juice 64oz', variation:'Tropicana', caseSize:6,  pickCases:4, whInv:48, unitsPicked:0 },
-    { sku:'SNK-107', name:'Corn Flakes 18oz', variation:'Kelloggs', caseSize:12, pickCases:3, whInv:96, unitsPicked:0 },
+    { sku:'BK1', name:'Veggie Quiche',    variation:'Regular Price',          caseSize:12, pickCases:1, whInv:18, unitsPicked:0 },
+    { sku:'SR1', name:'Sliced Roast Beef', variation:'Sliced Roast Beef (1/2 lb)', caseSize:25, pickCases:1, whInv:12, unitsPicked:0 },
   ],
   '👃Grocery-Pick List': [
-    { sku:'PRD-001', name:'Roma Tomatoes', variation:'Case 25lb', caseSize:1, pickCases:5, whInv:20, unitsPicked:0 },
-    { sku:'PRD-042', name:'Baby Spinach', variation:'1lb bag', caseSize:12, pickCases:2, whInv:60, unitsPicked:0 },
+    { sku:'39978025784', name:"Bob's Red Mill Coconut, Shredded, Unsweetened, 12oz", variation:'Regular', caseSize:4,    pickCases:1, whInv:4,  unitsPicked:0 },
+    { sku:'39978033918', name:"Bob's Red Mill Gluten-Free Baking Soda, 16oz",        variation:'Regular', caseSize:4,    pickCases:1, whInv:20, unitsPicked:0 },
+    { sku:'71012120505', name:'King Arthur Sir Galahad Flour, Bulk/Wholesale, 50lb',  variation:'Regular', caseSize:1,    pickCases:2, whInv:3,  unitsPicked:0 },
+    { sku:'85480000001', name:'Full Fat Organic Vanilla Yogurt, 24oz',                variation:'Regular', caseSize:null, pickCases:3, whInv:12, unitsPicked:0 },
   ],
-  '👃Produce-Pick List': [
-    { sku:'KIT-088', name:'Olive Oil 1L', variation:'Extra Virgin', caseSize:6, pickCases:3, whInv:36, unitsPicked:0 },
-    { sku:'KIT-201', name:'Sea Salt 1kg', variation:'Fine Grain', caseSize:null, pickCases:4, whInv:80, unitsPicked:0 },
+  '👃Produce-Pick List A': [
+    { sku:'33383000101', name:'Organic Baby Spinach, 5oz',    variation:'Regular', caseSize:12, pickCases:2, whInv:24, unitsPicked:0 },
+    { sku:'11110874318', name:'Roma Tomatoes, 25lb Case',     variation:'Regular', caseSize:1,  pickCases:4, whInv:8,  unitsPicked:0 },
+  ],
+  '👃Produce-Pick List B': [
+    { sku:'33000157700', name:'Organic Fuji Apples, 3lb bag', variation:'Regular', caseSize:8,  pickCases:3, whInv:16, unitsPicked:0 },
+    { sku:'94011000000', name:'Organic Bananas',               variation:'Regular', caseSize:null, pickCases:5, whInv:40, unitsPicked:0 },
   ]
 };
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxUhIUb-e5dWK0-53BRSQYJVrxj9_aVDZ72bxUZVD8swQvQOQ1VM34sP1GlBWZ0mgN8/exec';
-let cfg = { scriptUrl: SCRIPT_URL, tab:'👃PF Pick List', demo:false };
+let cfg = { scriptUrl: SCRIPT_URL, tab:'👃Grocery-Pick List', demo:false };
 let appState = { scanning:true, lastCode:'', item:null, rowIndex:-1, log:[] };
 
 // ══ SETUP ══

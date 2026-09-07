@@ -213,7 +213,8 @@ select option { background: #1a1d27; }
 .scanner-status-txt { color: var(--text2); }
 
 /* ── PICKLIST TABLE ── */
-.picklist-wrap { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.picklist-wrap { flex: 1; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { min-width: 820px; }
 .picklist-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 8px; gap: 10px; }
 .pl-progress { font-size: 12px; color: var(--text2); }
 .pl-progress strong { color: var(--green); }
@@ -278,6 +279,22 @@ tr.pl-active { background: rgba(245,158,11,0.1); outline: 1px solid var(--accent
 @keyframes fadein { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
 .rejected-txt { font-size: 13px; color: var(--danger); flex: 1; }
 .rejected-close { background: none; border: none; color: var(--danger); font-size: 18px; cursor: pointer; padding: 0 4px; }
+
+/* ── UNITS OVERRIDE ── */
+.override-wrap { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 14px; }
+.override-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+.override-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); }
+.override-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--accent-dim); border: 1px solid var(--accent-border); color: var(--accent); font-weight: 600; }
+.override-badge.active { background: var(--green-dim); border-color: var(--green-border); color: var(--green); }
+.override-row { display: flex; align-items: center; gap: 10px; }
+.override-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); font-size: 22px; font-weight: 700; text-align: center; padding: 12px; outline: none; transition: border-color 0.15s; }
+.override-input:focus { border-color: var(--green); }
+.override-input.active { border-color: var(--green); background: var(--green-dim); }
+.override-hint { font-size: 12px; color: var(--text3); margin-top: 5px; line-height: 1.4; }
+.override-hint.active { color: var(--green); }
+.calc-display { background: var(--surface2); border-radius: var(--r-sm); padding: 10px 14px; font-size: 13px; color: var(--text2); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+.calc-result { font-size: 16px; font-weight: 700; color: var(--text); }
+.calc-result.override { color: var(--green); }
 
 .hidden { display: none !important; }
 </style>
@@ -381,10 +398,14 @@ tr.pl-active { background: rgba(245,158,11,0.1); outline: 1px solid var(--accent
     <table id="pl-table">
       <thead>
         <tr>
-          <th>Item</th>
+          <th>Category</th>
+          <th>Item Name</th>
+          <th>Variation</th>
           <th>SKU</th>
+          <th style="text-align:center">Case</th>
+          <th style="text-align:center">WH Inv</th>
+          <th style="text-align:center">Pick</th>
           <th style="text-align:center">Picked</th>
-          <th style="text-align:center">Target</th>
           <th style="text-align:center">✓</th>
         </tr>
       </thead>
@@ -417,7 +438,31 @@ tr.pl-active { background: rgba(245,158,11,0.1); outline: 1px solid var(--accent
     <input type="number" class="qty-num" id="d-cases" value="1" min="0" oninput="drawerUpdateTotal()" />
     <button class="qty-btn" onclick="drawerAdj(1)">+</button>
   </div>
-  <div class="total-lbl" id="d-total">= <strong>0</strong> units</div>
+
+  <!-- Units override -->
+  <div class="override-wrap">
+    <div class="override-label-row">
+      <span class="override-label">Manual units override</span>
+      <span class="override-badge" id="override-badge">Using case calc</span>
+    </div>
+    <div class="override-row">
+      <button class="qty-btn" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);flex-shrink:0" onclick="overrideAdj(-1)">−</button>
+      <input type="number" class="override-input" id="d-override" placeholder="—" min="0"
+        oninput="drawerUpdateTotal()"
+        onfocus="overrideFocused()"
+      />
+      <button class="qty-btn" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);flex-shrink:0" onclick="overrideAdj(1)">+</button>
+    </div>
+    <div class="override-hint" id="override-hint">Type an exact unit count to override the case calculation — e.g. for partial cases or mismatched case sizes.</div>
+    <button style="font-size:11px;background:none;border:none;color:var(--text3);cursor:pointer;margin-top:4px;padding:0" onclick="clearOverride()">✕ Clear override</button>
+  </div>
+
+  <!-- Final units display -->
+  <div class="calc-display" style="margin-top:14px">
+    <span style="font-size:12px;">Units to write</span>
+    <span class="calc-result" id="d-final-units">0</span>
+  </div>
+
   <button class="btn-confirm-drawer" id="d-confirm-btn" onclick="confirmPick()">
     <span id="d-confirm-lbl">✓ Confirm Pull</span>
   </button>
@@ -592,10 +637,16 @@ function renderTable() {
   const tbody  = document.getElementById('pl-body');
 
   // Sort: incomplete first, done at bottom
+  // Within each group: Category asc → Item Name asc → Variation asc
   const sorted = [...picklist].sort((a,b) => {
     const aDone = isDone(a), bDone = isDone(b);
     if (aDone !== bDone) return aDone ? 1 : -1;
-    return 0;
+    const catA = (a.category||'').toLowerCase(), catB = (b.category||'').toLowerCase();
+    if (catA !== catB) return catA < catB ? -1 : 1;
+    const nameA = (a.name||'').toLowerCase(), nameB = (b.name||'').toLowerCase();
+    if (nameA !== nameB) return nameA < nameB ? -1 : 1;
+    const varA = (a.variation||'').toLowerCase(), varB = (b.variation||'').toLowerCase();
+    return varA < varB ? -1 : varA > varB ? 1 : 0;
   });
 
   // Filter by search
@@ -619,16 +670,15 @@ function renderTable() {
     tr.dataset.sku = item.sku;
     tr.onclick = () => openDrawer(item);
     tr.innerHTML = `
-      <td>
-        <div class="pl-name">${item.name}</div>
-        <div class="pl-variation">${item.variation || ''}</div>
-      </td>
+      <td style="white-space:nowrap;font-size:12px;color:var(--text2)">${item.category || '—'}</td>
+      <td><div class="pl-name">${item.name}</div></td>
+      <td style="font-size:12px;color:var(--text2)">${item.variation || ''}</td>
       <td class="pl-sku-cell">${item.sku}</td>
+      <td style="text-align:center"><span class="pl-num muted">${item.caseSize ?? '—'}</span></td>
+      <td style="text-align:center"><span class="pl-num muted">${item.whInv ?? '—'}</span></td>
+      <td style="text-align:center"><span class="pl-num muted">${item.pickCases ?? '—'}</span></td>
       <td style="text-align:center">
         <span class="pl-num ${done?'done':partial?'partial':'zero'}">${item.unitsPicked}</span>
-      </td>
-      <td style="text-align:center">
-        <span class="pl-num muted" style="color:var(--text2)">${target !== null ? target : '—'}</span>
       </td>
       <td>
         <div class="pl-check ${done?'done':partial?'partial':''}">
@@ -681,6 +731,8 @@ function openDrawer(item) {
 
   const defaultCases = item.pickCases && Number(item.pickCases) > 0 ? Number(item.pickCases) : 1;
   document.getElementById('d-cases').value = defaultCases;
+  document.getElementById('d-override').value = '';
+  document.getElementById('d-override').className = 'override-input';
   drawerUpdateTotal();
 
   document.getElementById('drawer-backdrop').style.display = 'block';
@@ -702,26 +754,90 @@ function drawerAdj(delta) {
   drawerUpdateTotal();
 }
 
-function drawerUpdateTotal() {
-  const item = activeItem; if (!item) return;
-  const cases = parseInt(document.getElementById('d-cases').value) || 0;
+function getCaseSize() {
+  const item = activeItem; if (!item) return null;
   let cs = item.caseSize && Number(item.caseSize) > 0 ? Number(item.caseSize) : null;
   if (!cs) { const v = parseInt(document.getElementById('d-case-inp').value); if(v>0) cs=v; }
-  const units = cs ? cases * cs : null;
-  document.getElementById('d-total').innerHTML = units !== null
-    ? `= <strong>${units} units</strong>`
-    : `<span style="color:var(--accent)">Enter case size to calculate</span>`;
+  return cs;
+}
+
+function getFinalUnits() {
+  // Override takes precedence if filled in
+  const overrideVal = document.getElementById('d-override').value.trim();
+  if (overrideVal !== '' && overrideVal !== '—') {
+    const ov = parseInt(overrideVal);
+    if (ov >= 0) return { units: ov, source: 'override' };
+  }
+  // Otherwise cases × case size
+  const cases = parseInt(document.getElementById('d-cases').value) || 0;
+  const cs = getCaseSize();
+  if (cs) return { units: cases * cs, source: 'calc' };
+  return { units: null, source: 'none' };
+}
+
+function drawerUpdateTotal() {
+  const { units, source } = getFinalUnits();
+  const badge   = document.getElementById('override-badge');
+  const hint    = document.getElementById('override-hint');
+  const finalEl = document.getElementById('d-final-units');
+  const overInp = document.getElementById('d-override');
+
+  if (source === 'override') {
+    badge.textContent = '⬆ Override active';
+    badge.className   = 'override-badge active';
+    hint.className    = 'override-hint active';
+    hint.textContent  = 'Using your manual unit count — case calculation ignored.';
+    overInp.className = 'override-input active';
+    finalEl.className = 'calc-result override';
+    finalEl.textContent = units !== null ? units : '—';
+  } else {
+    badge.textContent = 'Using case calc';
+    badge.className   = 'override-badge';
+    hint.className    = 'override-hint';
+    hint.textContent  = 'Type an exact unit count to override — e.g. for partial cases or mismatched case sizes.';
+    overInp.className = 'override-input';
+    finalEl.className = 'calc-result';
+    finalEl.textContent = units !== null ? units : '—';
+  }
+}
+
+function overrideFocused() {
+  // Pre-fill override with current calc value so picker can adjust from there
+  const overInp = document.getElementById('d-override');
+  if (!overInp.value) {
+    const { units, source } = getFinalUnits();
+    if (source === 'calc' && units !== null) overInp.value = units;
+  }
+  drawerUpdateTotal();
+}
+
+function overrideAdj(delta) {
+  const overInp = document.getElementById('d-override');
+  const cur = parseInt(overInp.value) || 0;
+  overInp.value = Math.max(0, cur + delta);
+  drawerUpdateTotal();
+}
+
+function clearOverride() {
+  document.getElementById('d-override').value = '';
+  document.getElementById('d-override').className = 'override-input';
+  drawerUpdateTotal();
 }
 
 async function confirmPick() {
   const item = activeItem; if (!item) return;
-  const cases = parseInt(document.getElementById('d-cases').value) || 0;
-  let cs = item.caseSize && Number(item.caseSize) > 0 ? Number(item.caseSize) : null;
-  if (!cs) { const v = parseInt(document.getElementById('d-case-inp').value); if(v>0) cs=v; }
-  if (!cs) { showToast('Enter case size first','err'); return; }
-  if (cases === 0) { showToast('Cases is 0 — nothing to record','err'); return; }
 
-  const units = cases * cs;
+  // Resolve case size (may have been manually entered)
+  let cs = getCaseSize();
+
+  // Get final units — override takes precedence over case calc
+  const { units, source } = getFinalUnits();
+
+  if (units === null) {
+    showToast('Enter case size or a manual unit count first', 'err');
+    return;
+  }
+  if (units === 0) { showToast('Units is 0 — nothing to record', 'err'); return; }
   const btn = document.getElementById('d-confirm-btn');
   const lbl = document.getElementById('d-confirm-lbl');
   btn.disabled = true;

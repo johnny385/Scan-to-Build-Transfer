@@ -339,6 +339,8 @@ tr.pl-active { background: rgba(245,158,11,0.1); outline: 1px solid var(--accent
   </div>
 
   <button class="btn-go" onclick="startScanner()">Open Scanner →</button>
+  <div class="divider">or</div>
+  <button class="btn-demo" onclick="startDemo()">▶ Try Demo Mode (test UI without sheet)</button>
 </div>
 
 <!-- ══ SCANNER ══ -->
@@ -508,6 +510,7 @@ async function launch() {
   document.getElementById('setup').style.display = 'none';
   const sc = document.getElementById('scanner');
   sc.style.display = 'flex';
+  sc.style.flexDirection = 'column';
   document.getElementById('active-tab-label').textContent = cfg.tab;
   await loadPicklist();
   setTimeout(initScanner, 100);
@@ -517,29 +520,68 @@ async function launch() {
 // LOAD PICKLIST FROM SHEET
 // ══════════════════════════════════════════════════════
 async function loadPicklist() {
-  document.getElementById('pl-body').innerHTML = '<tr><td colspan="5" class="no-results">Loading picklist…</td></tr>';
-  document.getElementById('pl-progress').textContent = 'Loading…';
+  const tbody = document.getElementById('pl-body');
+  const prog  = document.getElementById('pl-progress');
+  tbody.innerHTML = '<tr><td colspan="5" class="no-results" style="color:var(--text2)">⏳ Loading picklist…</td></tr>';
+  prog.textContent = 'Loading…';
 
   if (cfg.demo) {
-    await sleep(400);
+    await sleep(600);
     picklist = JSON.parse(JSON.stringify(DEMO[cfg.tab] || []));
-  } else {
-    try {
-      const url = `${cfg.scriptUrl}?action=list&sheet=${enc(cfg.tab)}`;
-      const res  = await fetch(url);
-      const data = await res.json();
-      if (data.items) {
-        picklist = data.items;
-      } else {
-        showToast('Could not load picklist: ' + (data.error||'unknown'), 'err');
-        picklist = [];
-      }
-    } catch(e) {
-      showToast('Network error loading picklist', 'err');
-      picklist = [];
-    }
+    renderTable();
+    return;
   }
-  renderTable();
+
+  try {
+    const url = `${cfg.scriptUrl}?action=list&sheet=${enc(cfg.tab)}`;
+    console.log('Fetching:', url);
+
+    const res = await fetch(url);
+    console.log('HTTP status:', res.status);
+
+    const text = await res.text();
+    console.log('Raw response:', text.substring(0, 300));
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch(parseErr) {
+      tbody.innerHTML = `<tr><td colspan="5" class="no-results" style="color:var(--danger)">
+        ❌ Script returned non-JSON. Check your Apps Script is deployed correctly.<br>
+        <span style="font-size:11px;font-family:monospace;color:var(--text3)">${text.substring(0,200)}</span>
+      </td></tr>`;
+      prog.textContent = 'Error';
+      return;
+    }
+
+    if (data.error) {
+      tbody.innerHTML = `<tr><td colspan="5" class="no-results" style="color:var(--danger)">
+        ❌ ${data.error}
+      </td></tr>`;
+      prog.textContent = 'Error';
+      return;
+    }
+
+    if (!data.items || data.items.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="no-results" style="color:var(--accent)">
+        ⚠ Sheet returned 0 items.<br>
+        <span style="font-size:11px;color:var(--text3)">Check tab name matches exactly: <code style="font-family:monospace">${cfg.tab}</code></span>
+      </td></tr>`;
+      prog.textContent = '0 items';
+      return;
+    }
+
+    picklist = data.items;
+    renderTable();
+
+  } catch(e) {
+    console.error('Fetch error:', e);
+    tbody.innerHTML = `<tr><td colspan="5" class="no-results" style="color:var(--danger)">
+      ❌ Network error: ${e.message}<br>
+      <span style="font-size:11px;color:var(--text3)">Check your internet connection and Apps Script URL.</span>
+    </td></tr>`;
+    prog.textContent = 'Error';
+  }
 }
 
 // ══════════════════════════════════════════════════════

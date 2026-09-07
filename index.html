@@ -685,15 +685,6 @@ function renderTable() {
 
   tbody.innerHTML = '';
 
-  // Delegated handler for check-td clicks (can't pass item object via inline onclick)
-  tbody.onclick = e => {
-    const td = e.target.closest('.check-td');
-    if (td) {
-      e.stopPropagation();
-      openDrawerNoteOnly(td.dataset.sku);
-    }
-  };
-
   filtered.forEach(item => {
     const done    = isDone(item);
     const partial = item.unitsPicked > 0 && !done;
@@ -701,23 +692,39 @@ function renderTable() {
     const tr = document.createElement('tr');
     tr.className = 'pl-row' + (done ? ' pl-done' : '') + (activeItem && activeItem.sku === item.sku ? ' pl-active' : '');
     tr.dataset.sku = item.sku;
-    tr.onclick = () => openDrawer(item);
-    tr.innerHTML = `
-      <td style="white-space:nowrap;font-size:12px;color:var(--text2)">${item.category || '—'}</td>
-      <td><div class="pl-name">${item.name}</div></td>
-      <td style="font-size:12px;color:var(--text2)">${item.variation || ''}</td>
-      <td class="pl-sku-cell">${item.sku}</td>
-      <td style="text-align:center"><span class="pl-num muted">${item.caseSize ?? '—'}</span></td>
-      <td style="text-align:center"><span class="pl-num muted">${item.whInv ?? '—'}</span></td>
-      <td style="text-align:center"><span class="pl-num muted">${item.pickCases ?? '—'}</span></td>
-      <td style="text-align:center">
-        <span class="pl-num ${done?'done':partial?'partial':'zero'}">${item.unitsPicked}</span>
-      </td>
-      <td class="check-td" data-sku="${item.sku}" style="cursor:pointer;">
-        <div class="pl-check ${done?'done':partial?'partial':''}" title="Tap to add note / mark without units">
-          ${done ? '✓' : partial ? '~' : ''}
-        </div>
-      </td>`;
+
+    // Build cells as DOM nodes so event listeners survive
+    const cells = [
+      { html: item.category || '—',   style: 'white-space:nowrap;font-size:12px;color:var(--text2)' },
+      { html: `<div class="pl-name">${item.name}</div>`, style: '' },
+      { html: item.variation || '',    style: 'font-size:12px;color:var(--text2)' },
+      { html: item.sku,                style: '', cls: 'pl-sku-cell' },
+      { html: item.caseSize ?? '—',   style: 'text-align:center' },
+      { html: item.whInv ?? '—',      style: 'text-align:center' },
+      { html: item.pickCases ?? '—',  style: 'text-align:center' },
+      { html: `<span class="pl-num ${done?'done':partial?'partial':'zero'}">${item.unitsPicked}</span>`, style: 'text-align:center' },
+    ];
+
+    cells.forEach(c => {
+      const td = document.createElement('td');
+      if (c.style) td.style.cssText = c.style;
+      if (c.cls)   td.className = c.cls;
+      td.innerHTML = c.html;
+      // Clicking any data cell opens normal drawer
+      td.addEventListener('click', () => openDrawer(item));
+      tr.appendChild(td);
+    });
+
+    // Checkbox cell — separate listener that opens note-only mode
+    const checkTd = document.createElement('td');
+    checkTd.style.cssText = 'text-align:center;cursor:pointer;';
+    checkTd.innerHTML = `<div class="pl-check ${done?'done':partial?'partial':''}" title="Tap to add a note / mark without changing units">${done ? '✓' : partial ? '~' : ''}</div>`;
+    checkTd.addEventListener('click', e => {
+      e.stopPropagation();
+      openDrawerNoteOnly(item);
+    });
+    tr.appendChild(checkTd);
+
     tbody.appendChild(tr);
   });
 
@@ -782,8 +789,7 @@ function openDrawer(item) {
 
 // Note-only mode — opened by tapping the checkbox circle
 // Cases default to 0, units not required, just saves note
-function openDrawerNoteOnly(sku) {
-  const item = picklist.find(r => String(r.sku) === String(sku));
+function openDrawerNoteOnly(item) {
   if (!item) return;
   openDrawer(item);
   // Override cases to 0 after drawer populates

@@ -900,18 +900,12 @@ async function confirmPick() {
   // Get final units — override takes precedence over case calc
   const { units, source } = getFinalUnits();
 
-  const noteOnly = document.getElementById('drawer').dataset.noteOnly === 'true';
-
-  if (!noteOnly) {
-    if (units === null) {
-      showToast('Enter case size or a manual unit count first', 'err');
-      return;
-    }
-    if (units === 0) { showToast('Units is 0 — nothing to record', 'err'); return; }
+  // Allow 0 units — picker may just want to record a note
+  if (units === null) {
+    showToast('Enter case size or a manual unit count first', 'err');
+    return;
   }
-
-  // In note-only mode, write 0 units (no change to Units Picked)
-  const unitsToWrite = (!noteOnly && units !== null) ? units : 0;
+  const unitsToWrite = units;
   const btn = document.getElementById('d-confirm-btn');
   const lbl = document.getElementById('d-confirm-lbl');
   btn.disabled = true;
@@ -922,12 +916,12 @@ async function confirmPick() {
     // Update local picklist
     const idx = picklist.findIndex(r => r.sku === item.sku);
     if (idx >= 0) {
-      if (!noteOnly) picklist[idx].unitsPicked = (Number(picklist[idx].unitsPicked)||0) + unitsToWrite;
+      picklist[idx].unitsPicked = (Number(picklist[idx].unitsPicked)||0) + unitsToWrite;
       if (!picklist[idx].caseSize && cs) picklist[idx].caseSize = cs;
       const noteVal = document.getElementById('d-notes').value.trim();
       if (noteVal !== '') picklist[idx].notes = noteVal;
     }
-    showToast(noteOnly ? '📝 Note saved' : `✓ ${unitsToWrite} units logged`, 'ok');
+    showToast(`✓ ${unitsToWrite} units logged`, 'ok');
   } else {
     try {
       const csParam   = cs ? `&caseSize=${cs}` : '';
@@ -943,7 +937,7 @@ async function confirmPick() {
           const noteVal = document.getElementById('d-notes').value.trim();
           if (noteVal !== '') picklist[idx].notes = noteVal;
         }
-        showToast(noteOnly ? '📝 Note saved' : `✓ ${unitsToWrite} units saved`, 'ok');
+        showToast(`✓ ${unitsToWrite} units saved`, 'ok');
       } else {
         showToast('Write failed: '+(d.reason||'unknown'), 'err');
       }

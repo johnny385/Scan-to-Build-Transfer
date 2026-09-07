@@ -75,17 +75,17 @@ select option { background: #1a1d27; }
 .tab-pill { background: var(--accent); color: #1a0a00; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; letter-spacing: 0.02em; }
 .s-title { font-size: 15px; font-weight: 600; }
 .count-badge { font-size: 12px; color: var(--green); background: var(--green-dim); border: 1px solid var(--green-border); border-radius: 20px; padding: 4px 10px; font-weight: 600; }
-.camera-wrap { position: relative; background: #000; width: 100%; flex-shrink: 0; min-height: 240px; overflow: hidden; }
-#preview { width: 100%; height: 240px; display: block; object-fit: cover; background: #000; }
-.scan-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-.scan-frame { width: 210px; height: 120px; position: relative; }
-.scan-frame::before { content: ''; position: absolute; top: 0; left: 0; width: 22px; height: 22px; border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); border-radius: 2px 0 0 0; }
-.scan-frame::after  { content: ''; position: absolute; top: 0; right: 0; width: 22px; height: 22px; border-top: 2px solid var(--accent); border-right: 2px solid var(--accent); border-radius: 0 2px 0 0; }
-.sf-bl::before { content: ''; position: absolute; bottom: 0; left: 0; width: 22px; height: 22px; border-bottom: 2px solid var(--accent); border-left: 2px solid var(--accent); border-radius: 0 0 0 2px; }
-.sf-bl::after  { content: ''; position: absolute; bottom: 0; right: 0; width: 22px; height: 22px; border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); border-radius: 0 0 2px 0; }
-.scan-line { position: absolute; left: 4px; right: 4px; height: 1.5px; background: linear-gradient(90deg, transparent, var(--accent), transparent); animation: scanline 2s ease-in-out infinite; top: 50%; }
-@keyframes scanline { 0% { transform: translateY(-48px); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(48px); opacity: 0; } }
-.scan-hint { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); }
+
+
+
+
+
+
+
+
+
+
+
 
 /* ── PANELS ── */
 .panels { flex: 1; padding: 12px 14px 32px; max-width: 460px; width: 100%; margin: 0 auto; }
@@ -198,6 +198,20 @@ select option { background: #1a1d27; }
 .pin-btn.empty { background:transparent; border-color:transparent; cursor:default; }
 .pin-shake { animation:pinshake 0.35s ease; }
 @keyframes pinshake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
+
+/* ── SCANNER INPUT BAR ── */
+.scanner-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+.scanner-bar-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--accent-dim); border: 1px solid var(--accent-border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.scanner-input-wrap { flex: 1; position: relative; }
+.scanner-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); font-size: 15px; padding: 10px 12px; outline: none; transition: border-color 0.15s; }
+.scanner-input:focus { border-color: var(--accent); }
+.scanner-input::placeholder { color: var(--text3); }
+.scanner-status { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-top: 5px; }
+.scanner-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 5px var(--green); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+.scanner-dot.idle { background: var(--text3); box-shadow: none; animation: none; }
+.scanner-status-txt { color: var(--text2); }
+
 .hidden { display: none !important; }
 </style>
 </head>
@@ -269,21 +283,16 @@ select option { background: #1a1d27; }
     <div class="count-badge" id="count-badge">0 picked</div>
   </div>
 
-  <div class="camera-wrap">
-    <video id="preview" playsinline webkit-playsinline autoplay muted disablePictureInPicture style="width:100%;height:240px;object-fit:cover;display:block;background:#000;"></video>
-    <div id="cam-start-overlay" style="position:absolute;inset:0;background:#0f1117;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;cursor:pointer;" onclick="startCamFromTap()">
-      <div style="width:56px;height:56px;border-radius:50%;background:rgba(245,158,11,0.15);border:1.5px solid rgba(245,158,11,0.4);display:flex;align-items:center;justify-content:center;">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-      </div>
-      <div style="font-size:15px;font-weight:600;color:#f1f5f9;">Tap to enable camera</div>
-      <div style="font-size:12px;color:#64748b;text-align:center;padding:0 32px;line-height:1.5;">Chrome requires a tap to request<br>camera permission</div>
+  <div class="scanner-bar">
+    <div class="scanner-bar-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"><rect x="1" y="4" width="3" height="16" rx="1"/><rect x="6" y="4" width="1.5" height="16" rx="0.5"/><rect x="9.5" y="4" width="3" height="16" rx="1"/><rect x="14.5" y="4" width="1.5" height="16" rx="0.5"/><rect x="17.5" y="4" width="1.5" height="16" rx="0.5"/></svg>
     </div>
-    <div class="scan-overlay">
-      <div class="scan-frame">
-        <div class="sf-bl"></div>
-        <div class="scan-line"></div>
+    <div class="scanner-input-wrap">
+      <input type="text" class="scanner-input" id="scanner-input" placeholder="Scan barcode or type SKU…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+      <div class="scanner-status">
+        <div class="scanner-dot" id="scanner-dot"></div>
+        <div class="scanner-status-txt" id="scanner-status-txt">Ready — scan a barcode or type a SKU and press Enter</div>
       </div>
-      <div class="scan-hint" id="scan-hint">Point at barcode</div>
     </div>
   </div>
 
@@ -294,7 +303,7 @@ select option { background: #1a1d27; }
       <div class="idle-body">
         <div class="idle-icon">📦</div>
         <div class="idle-title">Ready to scan</div>
-        <div class="idle-sub">Scanner looks up the SKU from the barcode and rejects anything not on this tab's picklist.</div>
+        <div class="idle-sub">Scan a barcode with the Bluetooth scanner — it will look up the SKU and reject anything not on this tab's picklist.</div>
         <div class="manual-row">
           <input type="text" id="manual-input" placeholder="Type SKU or barcode…" />
           <button class="btn-lookup" onclick="lookupManual()">Go</button>
@@ -434,75 +443,61 @@ function launch() {
   const sc = document.getElementById('scanner');
   sc.style.display = 'flex';
   document.getElementById('active-tab-label').textContent = cfg.tab;
-  document.getElementById('scan-hint').textContent = cfg.tab + ' picklist active';
-  // Don't auto-start camera — wait for user tap so Chrome shows permission prompt
+  // Auto-focus scanner input — Bluetooth scanner is ready immediately
+  setTimeout(initScanner, 100);
 }
 
-// ══ CAMERA ══
-async function startCamFromTap() {
-  const overlay = document.getElementById('cam-start-overlay');
-  overlay.innerHTML = '<div style="font-size:13px;color:#94a3b8;">Starting camera…</div>';
-  await initCam();
-}
+// ══ BLUETOOTH SCANNER INPUT ══
+function initScanner() {
+  const input = document.getElementById('scanner-input');
+  const dot   = document.getElementById('scanner-dot');
+  const txt   = document.getElementById('scanner-status-txt');
 
-async function initCam() {
-  const overlay = document.getElementById('cam-start-overlay');
-  const vid = document.getElementById('preview');
+  // Focus the input so scanner keystrokes land here immediately
+  input.focus();
 
-  // Step 1 — request camera stream directly (triggers permission prompt)
-  let stream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
-  } catch(e) {
-    if (overlay) overlay.innerHTML = '<div style="text-align:center;padding:0 24px"><div style="font-size:13px;color:#f87171;margin-bottom:8px;">Camera permission denied</div><div style="font-size:12px;color:#64748b;line-height:1.5;">Go to Chrome site settings for this URL → Camera → Allow, then reload.</div></div>';
-    document.getElementById('scan-hint').textContent = 'Use manual entry below';
-    return;
-  }
+  // Bluetooth scanners send the barcode as rapid keystrokes ending in Enter
+  // We detect this by measuring typing speed — scanners type much faster than humans
+  let buffer = '';
+  let lastKey = 0;
+  const SCANNER_SPEED_MS = 50; // scanners type a char every ~5-10ms; humans ~200ms+
 
-  // Step 2 — pipe stream into video element and play it
-  vid.srcObject = stream;
-  vid.style.display = 'block';
-  try { await vid.play(); } catch(e) {}
-  if (overlay) overlay.style.display = 'none';
-  document.getElementById('scan-hint').textContent = 'Point at barcode';
+  input.addEventListener('keydown', e => {
+    const now = Date.now();
 
-  // Step 3 — scan using BarcodeDetector (native Android Chrome API) with canvas fallback
-  if ('BarcodeDetector' in window) {
-    const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code','data_matrix','itf'] });
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    let scanning = true;
-
-    async function scanFrame() {
-      if (!scanning || !appState.scanning) { requestAnimationFrame(scanFrame); return; }
-      if (vid.readyState >= 2 && vid.videoWidth > 0) {
-        canvas.width  = vid.videoWidth;
-        canvas.height = vid.videoHeight;
-        ctx.drawImage(vid, 0, 0);
-        try {
-          const barcodes = await detector.detect(canvas);
-          if (barcodes.length > 0) {
-            const code = barcodes[0].rawValue;
-            if (code && code !== appState.lastCode) {
-              appState.lastCode = code;
-              handleScan(code);
-              // Brief pause after successful scan so it doesn't re-trigger
-              scanning = false;
-              setTimeout(() => { scanning = true; }, 1500);
-            }
-          }
-        } catch(e) {}
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const code = buffer.trim() || input.value.trim();
+      buffer = '';
+      input.value = '';
+      if (code && appState.scanning) {
+        // Flash the dot
+        dot.classList.remove('idle');
+        txt.textContent = 'Scanning: ' + code;
+        appState.lastCode = code;
+        handleScan(code);
+        setTimeout(() => { txt.textContent = 'Ready — scan a barcode or type a SKU and press Enter'; }, 1500);
       }
-      requestAnimationFrame(scanFrame);
+      return;
     }
-    requestAnimationFrame(scanFrame);
 
-  } else {
-    // BarcodeDetector not available — show manual entry message
-    document.getElementById('scan-hint').textContent = 'Auto-scan unavailable — use manual entry below';
-  }
+    // Build buffer for speed detection
+    if (now - lastKey < SCANNER_SPEED_MS && e.key.length === 1) {
+      buffer += e.key;
+    } else {
+      buffer = e.key.length === 1 ? e.key : '';
+    }
+    lastKey = now;
+  });
+
+  // Re-focus if user taps elsewhere (keeps scanner input always active)
+  document.addEventListener('click', e => {
+    if (e.target !== input) input.focus();
+  });
+
+  // Visual idle/active state
+  input.addEventListener('focus', () => { dot.classList.remove('idle'); });
+  input.addEventListener('blur',  () => { dot.classList.add('idle'); txt.textContent = 'Tap here to re-activate scanner'; });
 }
 
 // ══ SCAN / LOOKUP ══
@@ -678,6 +673,8 @@ function resetIdle() {
   appState.item = null; appState.lastCode = ''; appState.rowIndex = -1; appState.scanning = true;
   document.getElementById('manual-input').value = '';
   showSt('idle');
+  // Re-focus scanner input so next scan is captured immediately
+  setTimeout(() => { const el = document.getElementById('scanner-input'); if(el) el.focus(); }, 100);
 }
 function updateBadge() {
   const n = appState.log.filter(e=>e.status!=='failed').length;

@@ -684,6 +684,16 @@ function renderTable() {
   }
 
   tbody.innerHTML = '';
+
+  // Delegated handler for check-td clicks (can't pass item object via inline onclick)
+  tbody.onclick = e => {
+    const td = e.target.closest('.check-td');
+    if (td) {
+      e.stopPropagation();
+      openDrawerNoteOnly(td.dataset.sku);
+    }
+  };
+
   filtered.forEach(item => {
     const done    = isDone(item);
     const partial = item.unitsPicked > 0 && !done;
@@ -703,7 +713,7 @@ function renderTable() {
       <td style="text-align:center">
         <span class="pl-num ${done?'done':partial?'partial':'zero'}">${item.unitsPicked}</span>
       </td>
-      <td onclick="event.stopPropagation(); openDrawerNoteOnly(item)" style="cursor:pointer;">
+      <td class="check-td" data-sku="${item.sku}" style="cursor:pointer;">
         <div class="pl-check ${done?'done':partial?'partial':''}" title="Tap to add note / mark without units">
           ${done ? '✓' : partial ? '~' : ''}
         </div>
@@ -772,7 +782,9 @@ function openDrawer(item) {
 
 // Note-only mode — opened by tapping the checkbox circle
 // Cases default to 0, units not required, just saves note
-function openDrawerNoteOnly(item) {
+function openDrawerNoteOnly(sku) {
+  const item = picklist.find(r => String(r.sku) === String(sku));
+  if (!item) return;
   openDrawer(item);
   // Override cases to 0 after drawer populates
   setTimeout(() => {

@@ -203,11 +203,11 @@ select option { background: #1a1d27; }
 .scanner-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); font-size: 15px; padding: 10px 12px; outline: none; transition: border-color 0.15s; }
 .scanner-input:focus { border-color: var(--accent); }
 .scanner-input::placeholder { color: var(--text3); }
-.scanner-status { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-top: 5px; }
-.scanner-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 5px var(--green); animation: pulse 2s ease-in-out infinite; }
-@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-.scanner-dot.idle { background: var(--text3); box-shadow: none; animation: none; }
-.scanner-status-txt { color: var(--text2); }
+
+
+
+
+
 
 /* ── PICKLIST TABLE ── */
 .picklist-wrap { flex: 1; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -293,9 +293,6 @@ tr.pl-active { background: rgba(245,158,11,0.1); outline: 1px solid var(--accent
 .calc-result { font-size: 16px; font-weight: 700; color: var(--text); }
 .calc-result.override { color: var(--green); }
 
-
-.scan-trigger-btn { background: var(--accent); color: #1a0a00; border: none; border-radius: var(--r-sm); font-size: 12px; font-weight: 700; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; }
-.scan-trigger-btn:active { opacity: 0.8; }
 .hidden { display: none !important; }
 </style>
 </head>
@@ -364,27 +361,17 @@ tr.pl-active { background: rgba(245,158,11,0.1); outline: 1px solid var(--accent
     <div class="count-badge" id="count-badge">0 picked</div>
   </div>
 
-  <div class="scanner-bar" onclick="refocusScanner()">
+  <div class="scanner-bar">
     <div class="scanner-bar-icon">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"><rect x="1" y="4" width="3" height="16" rx="1"/><rect x="6" y="4" width="1.5" height="16" rx="0.5"/><rect x="9.5" y="4" width="3" height="16" rx="1"/><rect x="14.5" y="4" width="1.5" height="16" rx="0.5"/><rect x="17.5" y="4" width="1.5" height="16" rx="0.5"/></svg>
     </div>
     <div class="scanner-input-wrap">
-      <!-- Input is always focused — tap anywhere on this bar to re-focus -->
       <input type="text" class="scanner-input" id="scanner-input"
-        placeholder="Tap here then scan…"
+        placeholder="Scan barcode or type SKU + Enter…"
         autocomplete="off" autocorrect="off" autocapitalize="off"
-        autocapitalize="none" spellcheck="false"
-        inputmode="none"
+        spellcheck="false"
       />
-      <div class="scanner-status">
-        <div class="scanner-dot" id="scanner-dot"></div>
-        <div class="scanner-status-txt" id="scanner-status-txt">Tap this bar to activate, then scan</div>
-      </div>
     </div>
-    <button class="scan-trigger-btn" id="scan-trigger-btn" onclick="refocusScanner(event)">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-      Tap to scan
-    </button>
   </div>
 
   <!-- Rejected flash banner -->
@@ -954,65 +941,47 @@ async function confirmPick() {
 // ══════════════════════════════════════════════════════
 function initScanner() {
   const input = document.getElementById('scanner-input');
-  const dot   = document.getElementById('scanner-dot');
-  const txt   = document.getElementById('scanner-status-txt');
+  if (!input) return;
+
+  // Focus immediately
   input.focus();
 
+  // Enter key fires the lookup
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       e.preventDefault();
       const code = input.value.trim();
       input.value = '';
-      if (code) {
-        txt.textContent = 'Scanning: ' + code;
-        handleScan(code);
-        setTimeout(() => {
-          txt.textContent = 'Tap this bar to activate, then scan';
-          dot.classList.remove('idle');
-        }, 1500);
-      }
-      return;
+      if (code) handleScan(code);
     }
   });
 
-  // Also listen for paste events (some app-mode scanners paste rather than type)
-  input.addEventListener('paste', e => {
+  // Paste support for scanners that paste instead of type
+  input.addEventListener('paste', () => {
     setTimeout(() => {
       const code = input.value.trim();
-      if (code) {
-        input.value = '';
-        txt.textContent = 'Scanning: ' + code;
-        handleScan(code);
-        setTimeout(() => { txt.textContent = 'Tap this bar to activate, then scan'; }, 1500);
-      }
-    }, 50);
+      if (code) { input.value = ''; handleScan(code); }
+    }, 30);
   });
 
-  // Keep input focused — re-focus whenever drawer is closed or user taps scanner bar
+  // Re-focus when tapping anywhere outside drawer or notes field
   document.addEventListener('click', e => {
-    const drawer = document.getElementById('drawer');
-    const notesField = document.getElementById('d-notes');
-    if (!drawer.classList.contains('open') &&
-        e.target !== input &&
-        e.target !== notesField) {
-      input.focus();
-    }
+    if (document.getElementById('drawer').classList.contains('open')) return;
+    if (e.target.closest('textarea')) return;
+    input.focus();
   });
 
-  // Aggressively re-focus every 2s when drawer is closed (catches app-mode scanners
-  // that steal focus away from the input field)
+  // Re-focus every 3s as a safety net for app-mode scanners that steal focus
   setInterval(() => {
-    const drawer = document.getElementById('drawer');
-    if (!drawer.classList.contains('open') && document.activeElement !== input) {
+    if (!document.getElementById('drawer').classList.contains('open')) {
       input.focus();
     }
-  }, 2000);
+  }, 3000);
+}
 
-  input.addEventListener('blur',  () => { dot.classList.add('idle'); });
-  input.addEventListener('focus', () => {
-    dot.classList.remove('idle');
-    txt.textContent = 'Ready — scan now';
-  });
+function refocusScanner() {
+  const input = document.getElementById('scanner-input');
+  if (input) input.focus();
 }
 
 function refocusScanner(e) {

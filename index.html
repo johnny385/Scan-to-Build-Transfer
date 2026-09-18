@@ -816,16 +816,18 @@ function getCaseSize() {
 }
 
 function getFinalUnits() {
-  // Override takes precedence if filled in
+  // Override takes precedence if filled in (including explicit 0)
   const overrideVal = document.getElementById('d-override').value.trim();
   if (overrideVal !== '' && overrideVal !== '—') {
     const ov = parseInt(overrideVal);
-    if (ov >= 0) return { units: ov, source: 'override' };
+    if (!isNaN(ov) && ov >= 0) return { units: ov, source: 'override' };
   }
-  // Otherwise cases × case size
+  // Cases × case size
   const cases = parseInt(document.getElementById('d-cases').value) || 0;
   const cs = getCaseSize();
   if (cs) return { units: cases * cs, source: 'calc' };
+  // No case size but cases is 0 — allow as zero pick (for notes)
+  if (cases === 0) return { units: 0, source: 'calc' };
   return { units: null, source: 'none' };
 }
 
@@ -887,12 +889,8 @@ async function confirmPick() {
   // Get final units — override takes precedence over case calc
   const { units, source } = getFinalUnits();
 
-  // Allow 0 units — picker may just want to record a note
-  if (units === null) {
-    showToast('Enter case size or a manual unit count first', 'err');
-    return;
-  }
-  const unitsToWrite = units;
+  // Allow 0 units (e.g. note-only entries)
+  const unitsToWrite = (units !== null) ? units : 0;
   const btn = document.getElementById('d-confirm-btn');
   const lbl = document.getElementById('d-confirm-lbl');
   btn.disabled = true;
@@ -943,10 +941,35 @@ function initScanner() {
   const input = document.getElementById('scanner-input');
   if (!input) return;
 
-  // Focus immediately
-  input.focus();
+  function focus() {
+    if (!document.getElementById('drawer').classList.contains('open')) {
+      input.focus();
+    }
+  }
 
-  // Enter key fires the lookup
+  // Focus immediately on launch
+  focus();
+
+  // Re-focus on ANY interaction that isn't the drawer or a textarea
+  document.addEventListener('click', e => {
+    if (e.target.closest('#drawer')) return;
+    if (e.target.tagName === 'TEXTAREA') return;
+    if (e.target.tagName === 'BUTTON' && e.target.closest('#drawer')) return;
+    focus();
+  });
+
+  document.addEventListener('touchend', e => {
+    if (e.target.closest('#drawer')) return;
+    if (e.target.tagName === 'TEXTAREA') return;
+    focus();
+  });
+
+  // Re-focus whenever the input loses focus (unless drawer is open)
+  input.addEventListener('blur', () => {
+    setTimeout(focus, 100);
+  });
+
+  // Enter fires the lookup
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -963,20 +986,11 @@ function initScanner() {
       if (code) { input.value = ''; handleScan(code); }
     }, 30);
   });
+}
 
-  // Re-focus when tapping anywhere outside drawer or notes field
-  document.addEventListener('click', e => {
-    if (document.getElementById('drawer').classList.contains('open')) return;
-    if (e.target.closest('textarea')) return;
-    input.focus();
-  });
-
-  // Re-focus every 3s as a safety net for app-mode scanners that steal focus
-  setInterval(() => {
-    if (!document.getElementById('drawer').classList.contains('open')) {
-      input.focus();
-    }
-  }, 3000);
+function refocusScanner() {
+  const input = document.getElementById('scanner-input');
+  if (input) input.focus();
 }
 
 function refocusScanner() {

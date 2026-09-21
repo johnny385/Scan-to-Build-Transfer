@@ -1160,11 +1160,21 @@ async function confirmAddItem() {
     renderTable();
   } else {
     try {
-      const res  = await fetch(`${cfg.scriptUrl}?action=append&sheet=${enc(cfg.tab)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newItem)
+      // Send as GET params — Apps Script only supports doGet reliably
+      const params = new URLSearchParams({
+        action:      'append',
+        sheet:       cfg.tab,
+        sku:         newItem.sku,
+        name:        newItem.name,
+        variation:   newItem.variation   || '',
+        category:    newItem.category    || '',
+        caseSize:    newItem.caseSize    || '',
+        whInv:       newItem.whInv       || '',
+        pickCases:   newItem.pickCases   || '',
+        unitsPicked: newItem.unitsPicked || 0,
+        note:        newItem.notes       || '',
       });
+      const res = await fetch(`${cfg.scriptUrl}?${params.toString()}`);
       const data = await res.json();
       if (data.success) {
         newItem.rowIndex = data.rowIndex;

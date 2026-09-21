@@ -1174,8 +1174,31 @@ async function confirmAddItem() {
         unitsPicked: newItem.unitsPicked || 0,
         note:        newItem.notes       || '',
       });
-      const res = await fetch(`${cfg.scriptUrl}?${params.toString()}`);
-      const data = await res.json();
+      const url = `${cfg.scriptUrl}?${params.toString()}`;
+      console.log('Append URL:', url);
+      let res, text, data;
+      try {
+        res  = await fetch(url);
+        text = await res.text();
+        console.log('Append response status:', res.status);
+        console.log('Append response text:', text.substring(0, 300));
+      } catch(fetchErr) {
+        showToast('Fetch failed: ' + fetchErr.message, 'err');
+        // Show on screen for debugging
+        document.getElementById('add-drawer-sub').innerHTML =
+          `<span style="color:var(--danger)">Fetch error: ${fetchErr.message}</span>`;
+        btn.disabled = false; lbl.innerHTML = '➕ Add to Picklist';
+        return;
+      }
+      try {
+        data = JSON.parse(text);
+      } catch(parseErr) {
+        document.getElementById('add-drawer-sub').innerHTML =
+          `<span style="color:var(--danger)">Bad response (${res.status}):<br>
+          <small style="font-family:monospace;font-size:10px">${text.substring(0,200)}</small></span>`;
+        btn.disabled = false; lbl.innerHTML = '➕ Add to Picklist';
+        return;
+      }
       if (data.success) {
         newItem.rowIndex = data.rowIndex;
         picklist.unshift(newItem);
@@ -1183,10 +1206,14 @@ async function confirmAddItem() {
         closeAddDrawer();
         renderTable();
       } else {
-        showToast('Failed: ' + (data.reason || 'unknown'), 'err');
+        document.getElementById('add-drawer-sub').innerHTML =
+          `<span style="color:var(--danger)">Script error: ${data.reason || data.error || JSON.stringify(data)}</span>`;
+        showToast('Failed: ' + (data.reason || data.error || 'unknown'), 'err');
       }
     } catch(e) {
-      showToast('Network error', 'err');
+      document.getElementById('add-drawer-sub').innerHTML =
+        `<span style="color:var(--danger)">Error: ${e.message}</span>`;
+      showToast('Error: ' + e.message, 'err');
     }
   }
 

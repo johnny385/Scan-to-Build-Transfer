@@ -309,7 +309,7 @@ tr.pl-new .pl-name { color: #60a5fa; }
 .add-field label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); margin-bottom: 6px; }
 .add-field input, .add-field textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); font-size: 14px; padding: 10px 12px; outline: none; font-family: inherit; transition: border-color 0.15s; }
 .add-field input:focus, .add-field textarea:focus { border-color: #60a5fa; }
-.add-field input.prefilled { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.06); }
+.add-field input.prefilled { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.06); color: #60a5fa; }
 .add-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .btn-add-confirm { width: 100%; background: #3b82f6; color: #fff; border: none; border-radius: var(--r-sm); font-size: 15px; font-weight: 700; padding: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; }
 .btn-add-confirm:active { opacity: 0.85; }
@@ -1014,24 +1014,75 @@ function initScanner() {
 
 
 // ══ ADD ITEM DRAWER ══════════════════════════════════════
-function openAddDrawer(sku) {
+async function openAddDrawer(sku) {
   hideRejected();
-  // Pre-fill SKU
-  document.getElementById('add-sku').value        = sku || '';
-  document.getElementById('add-name').value       = '';
-  document.getElementById('add-variation').value  = '';
-  document.getElementById('add-category').value   = '';
-  document.getElementById('add-casesize').value   = '';
-  document.getElementById('add-whinv').value      = '';
-  document.getElementById('add-pickcases').value  = '';
-  document.getElementById('add-unitspicked').value= '0';
-  document.getElementById('add-notes').value      = '';
-  document.getElementById('add-drawer-sub').textContent =
-    `SKU "${sku}" is not on the ${cfg.tab}. Fill in the details to add it as a late addition — highlighted blue in the sheet.`;
 
+  // Reset all fields first
+  document.getElementById('add-sku').value         = sku || '';
+  document.getElementById('add-name').value        = '';
+  document.getElementById('add-variation').value   = '';
+  document.getElementById('add-category').value    = '';
+  document.getElementById('add-casesize').value    = '';
+  document.getElementById('add-whinv').value       = '';
+  document.getElementById('add-pickcases').value   = '';
+  document.getElementById('add-unitspicked').value = '0';
+  document.getElementById('add-notes').value       = '';
+
+  // Open drawer immediately so user sees something happening
   document.getElementById('add-backdrop').style.display = 'block';
   requestAnimationFrame(() => document.getElementById('add-drawer').classList.add('open'));
-  setTimeout(() => document.getElementById('add-name').focus(), 350);
+
+  const sub = document.getElementById('add-drawer-sub');
+
+  if (cfg.demo) {
+    // Demo: simulate a catalog hit for known demo SKUs
+    const demoCatalog = {
+      '99999999999': { name:'Demo Catalog Item', variation:'Regular', category:'Grocery - Demo', caseSize:6, whInv:24 }
+    };
+    const hit = demoCatalog[sku];
+    if (hit) {
+      fillFromCatalog(hit);
+      sub.innerHTML = `<span style="color:#60a5fa">✓ Found in Catalog</span> — details pre-filled. Review and confirm to add.`;
+    } else {
+      sub.textContent = `SKU "${sku}" not in Catalog. Fill in details manually.`;
+      setTimeout(() => document.getElementById('add-name').focus(), 350);
+    }
+    return;
+  }
+
+  // Look up Catalog tab via Apps Script
+  sub.innerHTML = `<span style="color:var(--text3)">⏳ Checking Catalog…</span>`;
+  try {
+    const res  = await fetch(`${cfg.scriptUrl}?action=catalog&code=${enc(sku)}`);
+    const data = await res.json();
+
+    if (data.found && data.item) {
+      fillFromCatalog(data.item);
+      sub.innerHTML = `<span style="color:#60a5fa">✓ Found in Catalog</span> — details pre-filled. Review and confirm to add.`;
+      // Focus units picked since everything else is filled
+      setTimeout(() => document.getElementById('add-unitspicked').focus(), 350);
+    } else {
+      sub.textContent = `SKU "${sku}" not found in Catalog. Fill in details manually.`;
+      setTimeout(() => document.getElementById('add-name').focus(), 350);
+    }
+  } catch(e) {
+    sub.textContent = `Catalog lookup failed — fill in details manually.`;
+    setTimeout(() => document.getElementById('add-name').focus(), 350);
+  }
+}
+
+function fillFromCatalog(item) {
+  document.getElementById('add-name').value      = item.name      || '';
+  document.getElementById('add-variation').value = item.variation || '';
+  document.getElementById('add-category').value  = item.category  || '';
+  document.getElementById('add-casesize').value  = item.caseSize  || '';
+  document.getElementById('add-whinv').value     = item.whInv     || '';
+  // Visually mark pre-filled fields
+  ['add-name','add-variation','add-category','add-casesize','add-whinv'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value) el.classList.add('prefilled');
+    el.addEventListener('input', () => el.classList.remove('prefilled'), { once: true });
+  });
 }
 
 function closeAddDrawer() {
@@ -1105,24 +1156,75 @@ function refocusScanner() {
 
 
 // ══ ADD ITEM DRAWER ══════════════════════════════════════
-function openAddDrawer(sku) {
+async function openAddDrawer(sku) {
   hideRejected();
-  // Pre-fill SKU
-  document.getElementById('add-sku').value        = sku || '';
-  document.getElementById('add-name').value       = '';
-  document.getElementById('add-variation').value  = '';
-  document.getElementById('add-category').value   = '';
-  document.getElementById('add-casesize').value   = '';
-  document.getElementById('add-whinv').value      = '';
-  document.getElementById('add-pickcases').value  = '';
-  document.getElementById('add-unitspicked').value= '0';
-  document.getElementById('add-notes').value      = '';
-  document.getElementById('add-drawer-sub').textContent =
-    `SKU "${sku}" is not on the ${cfg.tab}. Fill in the details to add it as a late addition — highlighted blue in the sheet.`;
 
+  // Reset all fields first
+  document.getElementById('add-sku').value         = sku || '';
+  document.getElementById('add-name').value        = '';
+  document.getElementById('add-variation').value   = '';
+  document.getElementById('add-category').value    = '';
+  document.getElementById('add-casesize').value    = '';
+  document.getElementById('add-whinv').value       = '';
+  document.getElementById('add-pickcases').value   = '';
+  document.getElementById('add-unitspicked').value = '0';
+  document.getElementById('add-notes').value       = '';
+
+  // Open drawer immediately so user sees something happening
   document.getElementById('add-backdrop').style.display = 'block';
   requestAnimationFrame(() => document.getElementById('add-drawer').classList.add('open'));
-  setTimeout(() => document.getElementById('add-name').focus(), 350);
+
+  const sub = document.getElementById('add-drawer-sub');
+
+  if (cfg.demo) {
+    // Demo: simulate a catalog hit for known demo SKUs
+    const demoCatalog = {
+      '99999999999': { name:'Demo Catalog Item', variation:'Regular', category:'Grocery - Demo', caseSize:6, whInv:24 }
+    };
+    const hit = demoCatalog[sku];
+    if (hit) {
+      fillFromCatalog(hit);
+      sub.innerHTML = `<span style="color:#60a5fa">✓ Found in Catalog</span> — details pre-filled. Review and confirm to add.`;
+    } else {
+      sub.textContent = `SKU "${sku}" not in Catalog. Fill in details manually.`;
+      setTimeout(() => document.getElementById('add-name').focus(), 350);
+    }
+    return;
+  }
+
+  // Look up Catalog tab via Apps Script
+  sub.innerHTML = `<span style="color:var(--text3)">⏳ Checking Catalog…</span>`;
+  try {
+    const res  = await fetch(`${cfg.scriptUrl}?action=catalog&code=${enc(sku)}`);
+    const data = await res.json();
+
+    if (data.found && data.item) {
+      fillFromCatalog(data.item);
+      sub.innerHTML = `<span style="color:#60a5fa">✓ Found in Catalog</span> — details pre-filled. Review and confirm to add.`;
+      // Focus units picked since everything else is filled
+      setTimeout(() => document.getElementById('add-unitspicked').focus(), 350);
+    } else {
+      sub.textContent = `SKU "${sku}" not found in Catalog. Fill in details manually.`;
+      setTimeout(() => document.getElementById('add-name').focus(), 350);
+    }
+  } catch(e) {
+    sub.textContent = `Catalog lookup failed — fill in details manually.`;
+    setTimeout(() => document.getElementById('add-name').focus(), 350);
+  }
+}
+
+function fillFromCatalog(item) {
+  document.getElementById('add-name').value      = item.name      || '';
+  document.getElementById('add-variation').value = item.variation || '';
+  document.getElementById('add-category').value  = item.category  || '';
+  document.getElementById('add-casesize').value  = item.caseSize  || '';
+  document.getElementById('add-whinv').value     = item.whInv     || '';
+  // Visually mark pre-filled fields
+  ['add-name','add-variation','add-category','add-casesize','add-whinv'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value) el.classList.add('prefilled');
+    el.addEventListener('input', () => el.classList.remove('prefilled'), { once: true });
+  });
 }
 
 function closeAddDrawer() {
@@ -1262,7 +1364,7 @@ function spinner() { return '<span class="spinner"></span>'; }
 <div class="add-drawer" id="add-drawer">
   <div class="drawer-handle"></div>
   <div class="add-drawer-title">➕ Add Late Item</div>
-  <div class="add-drawer-sub" id="add-drawer-sub">This SKU is not on the picklist. Fill in the details to add it as a late addition — it will be highlighted blue in the sheet.</div>
+  <div class="add-drawer-sub" id="add-drawer-sub">Checking Catalog…</div>
 
   <div class="add-field">
     <label>SKU <span style="color:var(--danger)">*</span></label>

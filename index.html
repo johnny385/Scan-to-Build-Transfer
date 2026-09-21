@@ -293,6 +293,28 @@ tr.pl-active { background: rgba(245,158,11,0.1); outline: 1px solid var(--accent
 .calc-result { font-size: 16px; font-weight: 700; color: var(--text); }
 .calc-result.override { color: var(--green); }
 
+
+/* ── NEW / LATE ADDITION ITEMS ── */
+tr.pl-new { background: rgba(59,130,246,0.08); }
+tr.pl-new td { border-bottom-color: rgba(59,130,246,0.15); }
+tr.pl-new .pl-name { color: #60a5fa; }
+.new-badge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: #60a5fa; border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; }
+
+/* ── ADD ITEM DRAWER ── */
+.add-drawer { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px 18px 36px; z-index: 201; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.34,1.1,0.64,1); max-width: 540px; margin: 0 auto; max-height: 90dvh; overflow-y: auto; }
+.add-drawer.open { transform: translateY(0); }
+.add-drawer-title { font-size: 17px; font-weight: 700; color: #60a5fa; margin-bottom: 4px; }
+.add-drawer-sub { font-size: 13px; color: var(--text2); margin-bottom: 16px; }
+.add-field { margin-bottom: 12px; }
+.add-field label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); margin-bottom: 6px; }
+.add-field input, .add-field textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); font-size: 14px; padding: 10px 12px; outline: none; font-family: inherit; transition: border-color 0.15s; }
+.add-field input:focus, .add-field textarea:focus { border-color: #60a5fa; }
+.add-field input.prefilled { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.06); }
+.add-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn-add-confirm { width: 100%; background: #3b82f6; color: #fff; border: none; border-radius: var(--r-sm); font-size: 15px; font-weight: 700; padding: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; }
+.btn-add-confirm:active { opacity: 0.85; }
+.btn-add-confirm:disabled { opacity: 0.5; }
+.btn-add-cancel { width: 100%; background: transparent; border: 1px solid var(--border); color: var(--text2); border-radius: var(--r-sm); font-size: 14px; padding: 12px; cursor: pointer; margin-top: 8px; }
 .hidden { display: none !important; }
 </style>
 </head>
@@ -646,9 +668,11 @@ function renderTable() {
   const search = (document.getElementById('pl-search').value || '').toLowerCase();
   const tbody  = document.getElementById('pl-body');
 
-  // Sort: incomplete first, done at bottom
-  // Within each group: Category asc → Item Name asc → Variation asc
+  // Sort: new items pinned to top, then incomplete, then done at bottom
+  // Within each group: Category → Name → Variation
   const sorted = [...picklist].sort((a,b) => {
+    if (a.isNew && !b.isNew) return -1;
+    if (!a.isNew && b.isNew) return 1;
     const aDone = isDone(a), bDone = isDone(b);
     if (aDone !== bDone) return aDone ? 1 : -1;
     const catA = (a.category||'').toLowerCase(), catB = (b.category||'').toLowerCase();
@@ -677,13 +701,13 @@ function renderTable() {
     const partial = item.unitsPicked > 0 && !done;
     const target  = targetUnits(item);
     const tr = document.createElement('tr');
-    tr.className = 'pl-row' + (done ? ' pl-done' : '') + (activeItem && activeItem.sku === item.sku ? ' pl-active' : '');
+    tr.className = 'pl-row' + (item.isNew ? ' pl-new' : '') + (done ? ' pl-done' : '') + (activeItem && activeItem.sku === item.sku ? ' pl-active' : '');
     tr.dataset.sku = item.sku;
 
     // Build cells as DOM nodes so event listeners survive
     const cells = [
       { html: item.category || '—',   style: 'white-space:nowrap;font-size:12px;color:var(--text2)' },
-      { html: `<div class="pl-name">${item.name}</div>`, style: '' },
+      { html: `<div class="pl-name">${item.name}${item.isNew ? '<span class="new-badge">LATE ADD</span>' : ''}</div>`, style: '' },
       { html: item.variation || '',    style: 'font-size:12px;color:var(--text2)' },
       { html: item.sku,                style: '', cls: 'pl-sku-cell' },
       { html: item.caseSize ?? '—',   style: 'text-align:center' },
@@ -988,9 +1012,181 @@ function initScanner() {
   });
 }
 
+
+// ══ ADD ITEM DRAWER ══════════════════════════════════════
+function openAddDrawer(sku) {
+  hideRejected();
+  // Pre-fill SKU
+  document.getElementById('add-sku').value        = sku || '';
+  document.getElementById('add-name').value       = '';
+  document.getElementById('add-variation').value  = '';
+  document.getElementById('add-category').value   = '';
+  document.getElementById('add-casesize').value   = '';
+  document.getElementById('add-whinv').value      = '';
+  document.getElementById('add-pickcases').value  = '';
+  document.getElementById('add-unitspicked').value= '0';
+  document.getElementById('add-notes').value      = '';
+  document.getElementById('add-drawer-sub').textContent =
+    `SKU "${sku}" is not on the ${cfg.tab}. Fill in the details to add it as a late addition — highlighted blue in the sheet.`;
+
+  document.getElementById('add-backdrop').style.display = 'block';
+  requestAnimationFrame(() => document.getElementById('add-drawer').classList.add('open'));
+  setTimeout(() => document.getElementById('add-name').focus(), 350);
+}
+
+function closeAddDrawer() {
+  document.getElementById('add-drawer').classList.remove('open');
+  document.getElementById('add-backdrop').style.display = 'none';
+  setTimeout(refocusScanner, 300);
+}
+
+async function confirmAddItem() {
+  const sku  = document.getElementById('add-sku').value.trim();
+  const name = document.getElementById('add-name').value.trim();
+  if (!sku)  { showToast('SKU is required', 'err'); return; }
+  if (!name) { showToast('Item Name is required', 'err'); return; }
+
+  const newItem = {
+    sku,
+    name,
+    variation:   document.getElementById('add-variation').value.trim(),
+    category:    document.getElementById('add-category').value.trim(),
+    caseSize:    Number(document.getElementById('add-casesize').value)   || null,
+    whInv:       Number(document.getElementById('add-whinv').value)      || 0,
+    pickCases:   Number(document.getElementById('add-pickcases').value)  || null,
+    unitsPicked: Number(document.getElementById('add-unitspicked').value)|| 0,
+    notes:       document.getElementById('add-notes').value.trim(),
+    isNew:       true,   // flag for blue highlight
+    rowIndex:    null,   // will be set after sheet append
+  };
+
+  const btn = document.getElementById('add-confirm-btn');
+  const lbl = document.getElementById('add-confirm-lbl');
+  btn.disabled = true;
+  lbl.innerHTML = '<span class="spinner"></span>';
+
+  if (cfg.demo) {
+    await sleep(700);
+    newItem.rowIndex = picklist.length + 5; // simulate row
+    picklist.unshift(newItem);
+    showToast('✓ Late item added', 'ok');
+    closeAddDrawer();
+    renderTable();
+  } else {
+    try {
+      const res  = await fetch(`${cfg.scriptUrl}?action=append&sheet=${enc(cfg.tab)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newItem)
+      });
+      const data = await res.json();
+      if (data.success) {
+        newItem.rowIndex = data.rowIndex;
+        picklist.unshift(newItem);
+        showToast('✓ Late item added to sheet', 'ok');
+        closeAddDrawer();
+        renderTable();
+      } else {
+        showToast('Failed: ' + (data.reason || 'unknown'), 'err');
+      }
+    } catch(e) {
+      showToast('Network error', 'err');
+    }
+  }
+
+  btn.disabled = false;
+  lbl.innerHTML = '➕ Add to Picklist';
+}
+
 function refocusScanner() {
   const input = document.getElementById('scanner-input');
   if (input) input.focus();
+}
+
+
+// ══ ADD ITEM DRAWER ══════════════════════════════════════
+function openAddDrawer(sku) {
+  hideRejected();
+  // Pre-fill SKU
+  document.getElementById('add-sku').value        = sku || '';
+  document.getElementById('add-name').value       = '';
+  document.getElementById('add-variation').value  = '';
+  document.getElementById('add-category').value   = '';
+  document.getElementById('add-casesize').value   = '';
+  document.getElementById('add-whinv').value      = '';
+  document.getElementById('add-pickcases').value  = '';
+  document.getElementById('add-unitspicked').value= '0';
+  document.getElementById('add-notes').value      = '';
+  document.getElementById('add-drawer-sub').textContent =
+    `SKU "${sku}" is not on the ${cfg.tab}. Fill in the details to add it as a late addition — highlighted blue in the sheet.`;
+
+  document.getElementById('add-backdrop').style.display = 'block';
+  requestAnimationFrame(() => document.getElementById('add-drawer').classList.add('open'));
+  setTimeout(() => document.getElementById('add-name').focus(), 350);
+}
+
+function closeAddDrawer() {
+  document.getElementById('add-drawer').classList.remove('open');
+  document.getElementById('add-backdrop').style.display = 'none';
+  setTimeout(refocusScanner, 300);
+}
+
+async function confirmAddItem() {
+  const sku  = document.getElementById('add-sku').value.trim();
+  const name = document.getElementById('add-name').value.trim();
+  if (!sku)  { showToast('SKU is required', 'err'); return; }
+  if (!name) { showToast('Item Name is required', 'err'); return; }
+
+  const newItem = {
+    sku,
+    name,
+    variation:   document.getElementById('add-variation').value.trim(),
+    category:    document.getElementById('add-category').value.trim(),
+    caseSize:    Number(document.getElementById('add-casesize').value)   || null,
+    whInv:       Number(document.getElementById('add-whinv').value)      || 0,
+    pickCases:   Number(document.getElementById('add-pickcases').value)  || null,
+    unitsPicked: Number(document.getElementById('add-unitspicked').value)|| 0,
+    notes:       document.getElementById('add-notes').value.trim(),
+    isNew:       true,   // flag for blue highlight
+    rowIndex:    null,   // will be set after sheet append
+  };
+
+  const btn = document.getElementById('add-confirm-btn');
+  const lbl = document.getElementById('add-confirm-lbl');
+  btn.disabled = true;
+  lbl.innerHTML = '<span class="spinner"></span>';
+
+  if (cfg.demo) {
+    await sleep(700);
+    newItem.rowIndex = picklist.length + 5; // simulate row
+    picklist.unshift(newItem);
+    showToast('✓ Late item added', 'ok');
+    closeAddDrawer();
+    renderTable();
+  } else {
+    try {
+      const res  = await fetch(`${cfg.scriptUrl}?action=append&sheet=${enc(cfg.tab)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newItem)
+      });
+      const data = await res.json();
+      if (data.success) {
+        newItem.rowIndex = data.rowIndex;
+        picklist.unshift(newItem);
+        showToast('✓ Late item added to sheet', 'ok');
+        closeAddDrawer();
+        renderTable();
+      } else {
+        showToast('Failed: ' + (data.reason || 'unknown'), 'err');
+      }
+    } catch(e) {
+      showToast('Network error', 'err');
+    }
+  }
+
+  btn.disabled = false;
+  lbl.innerHTML = '➕ Add to Picklist';
 }
 
 function refocusScanner() {
@@ -1023,12 +1219,18 @@ async function handleScan(code) {
 // ══════════════════════════════════════════════════════
 function showRejected(code) {
   const el = document.getElementById('rejected-banner');
-  document.getElementById('rejected-txt').textContent = `⛔ "${code}" is not on the ${cfg.tab} — not picked.`;
+  document.getElementById('rejected-txt').innerHTML =
+    `⛔ <strong>${code}</strong> is not on this picklist. &nbsp;` +
+    `<button onclick="hideRejected()" ` +
+    `style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:700;padding:4px 12px;cursor:pointer;margin-left:4px;">` +
+    `✕ Ignore</button>` +
+    `<button onclick="openAddDrawer('${code.replace(/'/g, "\'")}')" ` +
+    `style="background:transparent;color:#60a5fa;border:none;font-size:12px;cursor:pointer;margin-left:8px;text-decoration:underline;">` +
+    `➕ Add as late item</button>`;
   el.classList.remove('hidden');
   el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  // Auto-dismiss after 4 seconds
   clearTimeout(window._rejectTimer);
-  window._rejectTimer = setTimeout(hideRejected, 4000);
+  window._rejectTimer = setTimeout(hideRejected, 8000);
 }
 function hideRejected() {
   document.getElementById('rejected-banner').classList.add('hidden');
@@ -1054,5 +1256,60 @@ function enc(s) { return encodeURIComponent(s); }
 function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
 function spinner() { return '<span class="spinner"></span>'; }
 </script>
+
+<!-- ══ ADD ITEM DRAWER ══ -->
+<div class="drawer-backdrop" id="add-backdrop" onclick="closeAddDrawer()" style="display:none;z-index:200;"></div>
+<div class="add-drawer" id="add-drawer">
+  <div class="drawer-handle"></div>
+  <div class="add-drawer-title">➕ Add Late Item</div>
+  <div class="add-drawer-sub" id="add-drawer-sub">This SKU is not on the picklist. Fill in the details to add it as a late addition — it will be highlighted blue in the sheet.</div>
+
+  <div class="add-field">
+    <label>SKU <span style="color:var(--danger)">*</span></label>
+    <input type="text" id="add-sku" placeholder="SKU" autocomplete="off" autocapitalize="off" spellcheck="false" class="prefilled" readonly />
+  </div>
+  <div class="add-field">
+    <label>Item Name <span style="color:var(--danger)">*</span></label>
+    <input type="text" id="add-name" placeholder="e.g. Bob's Red Mill Oats 32oz" autocomplete="off" spellcheck="false" />
+  </div>
+  <div class="add-field">
+    <label>Variation</label>
+    <input type="text" id="add-variation" placeholder="e.g. Regular" autocomplete="off" spellcheck="false" />
+  </div>
+  <div class="add-field">
+    <label>Category</label>
+    <input type="text" id="add-category" placeholder="e.g. Grocery - Baking" autocomplete="off" spellcheck="false" />
+  </div>
+  <div class="add-field-row">
+    <div class="add-field">
+      <label>Case Size</label>
+      <input type="number" id="add-casesize" placeholder="e.g. 12" min="0" />
+    </div>
+    <div class="add-field">
+      <label>WH Inventory</label>
+      <input type="number" id="add-whinv" placeholder="e.g. 24" min="0" />
+    </div>
+  </div>
+  <div class="add-field-row">
+    <div class="add-field">
+      <label>Pick Amount (cases)</label>
+      <input type="number" id="add-pickcases" placeholder="e.g. 1" min="0" />
+    </div>
+    <div class="add-field">
+      <label>Units Picked</label>
+      <input type="number" id="add-unitspicked" placeholder="0" min="0" value="0" />
+    </div>
+  </div>
+  <div class="add-field">
+    <label>Notes</label>
+    <textarea id="add-notes" rows="2" placeholder="Optional note…"></textarea>
+  </div>
+
+  <button class="btn-add-confirm" id="add-confirm-btn" onclick="confirmAddItem()">
+    <span id="add-confirm-lbl">➕ Add to Picklist</span>
+  </button>
+  <button class="btn-add-cancel" onclick="closeAddDrawer()">Cancel — don't add</button>
+</div>
+
 </body>
 </html>

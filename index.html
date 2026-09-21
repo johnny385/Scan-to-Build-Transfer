@@ -1306,8 +1306,15 @@ function refocusScanner(e) {
 // ══════════════════════════════════════════════════════
 // SCAN HANDLER
 // ══════════════════════════════════════════════════════
+function normalizeSKU(val) {
+  const s = String(val || '').trim();
+  if (/^\d+$/.test(s)) return String(Number(s));
+  return s.toLowerCase();
+}
+
 async function handleScan(code) {
-  const item = picklist.find(r => String(r.sku).trim() === String(code).trim());
+  const normalCode = normalizeSKU(code);
+  const item = picklist.find(r => normalizeSKU(r.sku) === normalCode);
   if (item) {
     hideRejected();
     openDrawer(item);

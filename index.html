@@ -301,7 +301,8 @@ tr.pl-new .pl-name { color: #60a5fa; }
 .new-badge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: #60a5fa; border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; }
 
 /* ── ADD ITEM DRAWER ── */
-.add-drawer { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px 18px 36px; z-index: 201; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.34,1.1,0.64,1); max-width: 540px; margin: 0 auto; max-height: 90dvh; overflow-y: auto; }
+.add-drawer { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-radius: 20px 20px 0 0; z-index: 300; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.34,1.1,0.64,1); max-width: 540px; margin: 0 auto; max-height: 90dvh; overflow: hidden; display: flex; flex-direction: column; }
+.add-drawer-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 20px 18px 36px; }
 .add-drawer.open { transform: translateY(0); }
 .add-drawer-title { font-size: 17px; font-weight: 700; color: #60a5fa; margin-bottom: 4px; }
 .add-drawer-sub { font-size: 13px; color: var(--text2); margin-bottom: 16px; }
@@ -1417,8 +1418,9 @@ function spinner() { return '<span class="spinner"></span>'; }
 </script>
 
 <!-- ══ ADD ITEM DRAWER ══ -->
-<div class="drawer-backdrop" id="add-backdrop" onclick="closeAddDrawer()" style="display:none;z-index:200;"></div>
+<div class="drawer-backdrop" id="add-backdrop" onclick="closeAddDrawer()" style="display:none;z-index:290;"></div>
 <div class="add-drawer" id="add-drawer">
+  <div class="add-drawer-scroll">
   <div class="drawer-handle"></div>
   <div class="add-drawer-title">➕ Add Late Item</div>
   <div class="add-drawer-sub" id="add-drawer-sub">Checking Catalog…</div>
@@ -1468,6 +1470,7 @@ function spinner() { return '<span class="spinner"></span>'; }
     <span id="add-confirm-lbl">➕ Add to Picklist</span>
   </button>
   <button class="btn-add-cancel" onclick="closeAddDrawer()">Cancel — don't add</button>
+  </div><!-- /add-drawer-scroll -->
 </div>
 
 </body>

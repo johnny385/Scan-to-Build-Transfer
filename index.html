@@ -309,7 +309,7 @@ tr.pl-new .pl-name { color: #60a5fa; }
 .add-field label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); margin-bottom: 6px; }
 .add-field input, .add-field textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); font-size: 14px; padding: 10px 12px; outline: none; font-family: inherit; transition: border-color 0.15s; }
 .add-field input:focus, .add-field textarea:focus { border-color: #60a5fa; }
-.add-field input.prefilled { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.06); color: #60a5fa; }
+.add-field input.prefilled { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.06); }
 .add-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .btn-add-confirm { width: 100%; background: #3b82f6; color: #fff; border: none; border-radius: var(--r-sm); font-size: 15px; font-weight: 700; padding: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; }
 .btn-add-confirm:active { opacity: 0.85; }
@@ -1017,16 +1017,18 @@ function initScanner() {
 async function openAddDrawer(sku) {
   hideRejected();
 
-  // Reset all fields first
+  // Reset all fields — ensure none are locked from a previous session
+  const resetIds = ['add-name','add-variation','add-category','add-casesize','add-whinv','add-pickcases','add-unitspicked','add-notes'];
+  resetIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = '';
+    el.removeAttribute('readonly');
+    el.removeAttribute('disabled');
+    el.classList.remove('prefilled');
+  });
   document.getElementById('add-sku').value         = sku || '';
-  document.getElementById('add-name').value        = '';
-  document.getElementById('add-variation').value   = '';
-  document.getElementById('add-category').value    = '';
-  document.getElementById('add-casesize').value    = '';
-  document.getElementById('add-whinv').value       = '';
-  document.getElementById('add-pickcases').value   = '';
   document.getElementById('add-unitspicked').value = '0';
-  document.getElementById('add-notes').value       = '';
 
   // Open drawer immediately so user sees something happening
   document.getElementById('add-backdrop').style.display = 'block';
@@ -1082,17 +1084,30 @@ async function openAddDrawer(sku) {
 }
 
 function fillFromCatalog(item) {
-  document.getElementById('add-name').value      = item.name      || '';
-  document.getElementById('add-variation').value = item.variation || '';
-  document.getElementById('add-category').value  = item.category  || '';
-  document.getElementById('add-casesize').value  = item.caseSize  || '';
-  document.getElementById('add-whinv').value     = item.whInv     || '';
-  // Visually mark pre-filled fields
-  ['add-name','add-variation','add-category','add-casesize','add-whinv'].forEach(id => {
+  const fields = {
+    'add-name':      item.name      || '',
+    'add-variation': item.variation || '',
+    'add-category':  item.category  || '',
+    'add-casesize':  item.caseSize  || '',
+    'add-whinv':     item.whInv     || '',
+  };
+  Object.entries(fields).forEach(([id, val]) => {
     const el = document.getElementById(id);
-    if (el && el.value) el.classList.add('prefilled');
-    el.addEventListener('input', () => el.classList.remove('prefilled'), { once: true });
+    if (!el) return;
+    el.value = val;
+    el.removeAttribute('readonly');   // ensure never locked
+    el.removeAttribute('disabled');   // ensure never locked
+    if (val) {
+      el.classList.add('prefilled');
+      el.addEventListener('input', () => el.classList.remove('prefilled'), { once: true });
+    }
   });
+  // Pick Amount and Units Picked are never pre-filled from catalog —
+  // always leave those for the picker to enter fresh
+  const pickEl = document.getElementById('add-pickcases');
+  if (pickEl) { pickEl.value = ''; pickEl.removeAttribute('readonly'); pickEl.removeAttribute('disabled'); }
+  const upEl = document.getElementById('add-unitspicked');
+  if (upEl) { upEl.value = '0'; upEl.removeAttribute('readonly'); upEl.removeAttribute('disabled'); }
 }
 
 function closeAddDrawer() {
@@ -1169,16 +1184,18 @@ function refocusScanner() {
 async function openAddDrawer(sku) {
   hideRejected();
 
-  // Reset all fields first
+  // Reset all fields — ensure none are locked from a previous session
+  const resetIds = ['add-name','add-variation','add-category','add-casesize','add-whinv','add-pickcases','add-unitspicked','add-notes'];
+  resetIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = '';
+    el.removeAttribute('readonly');
+    el.removeAttribute('disabled');
+    el.classList.remove('prefilled');
+  });
   document.getElementById('add-sku').value         = sku || '';
-  document.getElementById('add-name').value        = '';
-  document.getElementById('add-variation').value   = '';
-  document.getElementById('add-category').value    = '';
-  document.getElementById('add-casesize').value    = '';
-  document.getElementById('add-whinv').value       = '';
-  document.getElementById('add-pickcases').value   = '';
   document.getElementById('add-unitspicked').value = '0';
-  document.getElementById('add-notes').value       = '';
 
   // Open drawer immediately so user sees something happening
   document.getElementById('add-backdrop').style.display = 'block';
@@ -1234,17 +1251,30 @@ async function openAddDrawer(sku) {
 }
 
 function fillFromCatalog(item) {
-  document.getElementById('add-name').value      = item.name      || '';
-  document.getElementById('add-variation').value = item.variation || '';
-  document.getElementById('add-category').value  = item.category  || '';
-  document.getElementById('add-casesize').value  = item.caseSize  || '';
-  document.getElementById('add-whinv').value     = item.whInv     || '';
-  // Visually mark pre-filled fields
-  ['add-name','add-variation','add-category','add-casesize','add-whinv'].forEach(id => {
+  const fields = {
+    'add-name':      item.name      || '',
+    'add-variation': item.variation || '',
+    'add-category':  item.category  || '',
+    'add-casesize':  item.caseSize  || '',
+    'add-whinv':     item.whInv     || '',
+  };
+  Object.entries(fields).forEach(([id, val]) => {
     const el = document.getElementById(id);
-    if (el && el.value) el.classList.add('prefilled');
-    el.addEventListener('input', () => el.classList.remove('prefilled'), { once: true });
+    if (!el) return;
+    el.value = val;
+    el.removeAttribute('readonly');   // ensure never locked
+    el.removeAttribute('disabled');   // ensure never locked
+    if (val) {
+      el.classList.add('prefilled');
+      el.addEventListener('input', () => el.classList.remove('prefilled'), { once: true });
+    }
   });
+  // Pick Amount and Units Picked are never pre-filled from catalog —
+  // always leave those for the picker to enter fresh
+  const pickEl = document.getElementById('add-pickcases');
+  if (pickEl) { pickEl.value = ''; pickEl.removeAttribute('readonly'); pickEl.removeAttribute('disabled'); }
+  const upEl = document.getElementById('add-unitspicked');
+  if (upEl) { upEl.value = '0'; upEl.removeAttribute('readonly'); upEl.removeAttribute('disabled'); }
 }
 
 function closeAddDrawer() {

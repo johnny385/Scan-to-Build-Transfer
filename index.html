@@ -966,33 +966,41 @@ function initScanner() {
   const input = document.getElementById('scanner-input');
   if (!input) return;
 
+  function anyDrawerOpen() {
+    return document.getElementById('drawer').classList.contains('open') ||
+           document.getElementById('add-drawer').classList.contains('open');
+  }
+
   function focus() {
-    if (!document.getElementById('drawer').classList.contains('open')) {
-      input.focus();
-    }
+    if (!anyDrawerOpen()) input.focus();
   }
 
   // Focus immediately on launch
   focus();
 
-  // Re-focus on ANY interaction that isn't the drawer or a textarea
+  // Re-focus on clicks/taps — but never when a drawer is open,
+  // and never when tapping an input, textarea, or button
   document.addEventListener('click', e => {
-    if (e.target.closest('#drawer')) return;
-    if (e.target.tagName === 'TEXTAREA') return;
-    if (e.target.tagName === 'BUTTON' && e.target.closest('#drawer')) return;
+    if (anyDrawerOpen()) return;
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON' || tag === 'SELECT') return;
     focus();
   });
 
   document.addEventListener('touchend', e => {
-    if (e.target.closest('#drawer')) return;
-    if (e.target.tagName === 'TEXTAREA') return;
+    if (anyDrawerOpen()) return;
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON' || tag === 'SELECT') return;
     focus();
   });
 
-  // Re-focus whenever the input loses focus (unless drawer is open)
+  // Re-focus on blur — but not if a drawer is open (would steal keyboard from drawer fields)
   input.addEventListener('blur', () => {
-    setTimeout(focus, 100);
+    setTimeout(() => { if (!anyDrawerOpen()) focus(); }, 150);
   });
+
+  // Periodic re-focus safety net — only when no drawer is open
+  setInterval(() => { if (!anyDrawerOpen()) focus(); }, 3000);
 
   // Enter fires the lookup
   input.addEventListener('keydown', e => {

@@ -210,7 +210,11 @@ select option { background: #1a1d27; }
 
 
 /* ── PICKLIST TABLE ── */
-.picklist-wrap { flex: 1; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.picklist-wrap { flex: 1; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y pan-x; }
+table { min-width: 820px; touch-action: pan-y pan-x; }
+tr.pl-row { touch-action: pan-y; }
+tr.pl-selected { background: rgba(245,158,11,0.12) !important; outline: 1px solid var(--accent-border); }
+tr.pl-selected td { color: var(--text) !important; }
 table { min-width: 820px; }
 .picklist-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 8px; gap: 10px; }
 .pl-progress { font-size: 12px; color: var(--text2); }
@@ -316,6 +320,13 @@ tr.pl-new .pl-name { color: #60a5fa; }
 .btn-add-confirm:active { opacity: 0.85; }
 .btn-add-confirm:disabled { opacity: 0.5; }
 .btn-add-cancel { width: 100%; background: transparent; border: 1px solid var(--border); color: var(--text2); border-radius: var(--r-sm); font-size: 14px; padding: 12px; cursor: pointer; margin-top: 8px; }
+
+/* ── COLUMN FILTERS ── */
+.filter-row th { padding: 4px 10px 6px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+.filter-row th:first-child { padding-left: 14px; }
+.filter-row th:last-child { padding-right: 14px; }
+.col-filter { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 11px; padding: 4px 6px; outline: none; }
+.col-filter:focus { border-color: var(--accent); }
 .hidden { display: none !important; }
 </style>
 </head>
@@ -421,6 +432,13 @@ tr.pl-new .pl-name { color: #60a5fa; }
           <th style="text-align:center">Pick</th>
           <th style="text-align:center">Picked</th>
           <th style="text-align:center">✓</th>
+        </tr>
+        <tr class="filter-row">
+          <th><input class="col-filter" id="f-category" placeholder="Filter…" oninput="renderTable()"></th>
+          <th><input class="col-filter" id="f-name"     placeholder="Filter…" oninput="renderTable()"></th>
+          <th><input class="col-filter" id="f-variation" placeholder="Filter…" oninput="renderTable()"></th>
+          <th><input class="col-filter" id="f-sku"      placeholder="Filter…" oninput="renderTable()"></th>
+          <th></th><th></th><th></th><th></th><th></th>
         </tr>
       </thead>
       <tbody id="pl-body">
@@ -666,11 +684,15 @@ async function loadPicklist() {
 // RENDER TABLE
 // ══════════════════════════════════════════════════════
 function renderTable() {
-  const search = (document.getElementById('pl-search').value || '').toLowerCase();
+  // Column filters
+  const fCat  = (document.getElementById('f-category')?.value  || '').toLowerCase();
+  const fName = (document.getElementById('f-name')?.value      || '').toLowerCase();
+  const fVar  = (document.getElementById('f-variation')?.value || '').toLowerCase();
+  const fSku  = (document.getElementById('f-sku')?.value       || '').toLowerCase();
+  const search = (document.getElementById('pl-search').value   || '').toLowerCase();
   const tbody  = document.getElementById('pl-body');
 
   // Sort: new items pinned to top, then incomplete, then done at bottom
-  // Within each group: Category → Name → Variation
   const sorted = [...picklist].sort((a,b) => {
     if (a.isNew && !b.isNew) return -1;
     if (!a.isNew && b.isNew) return 1;
@@ -684,10 +706,20 @@ function renderTable() {
     return varA < varB ? -1 : varA > varB ? 1 : 0;
   });
 
-  // Filter by search
-  const filtered = search
-    ? sorted.filter(it => it.name.toLowerCase().includes(search) || String(it.sku).toLowerCase().includes(search) || (it.variation||'').toLowerCase().includes(search))
-    : sorted;
+  // Apply filters
+  const filtered = sorted.filter(it => {
+    if (fCat  && !(it.category  ||'').toLowerCase().includes(fCat))  return false;
+    if (fName && !(it.name      ||'').toLowerCase().includes(fName)) return false;
+    if (fVar  && !(it.variation ||'').toLowerCase().includes(fVar))  return false;
+    if (fSku  && !String(it.sku||'').toLowerCase().includes(fSku))  return false;
+    if (search && !(
+      (it.name||'').toLowerCase().includes(search) ||
+      String(it.sku||'').toLowerCase().includes(search) ||
+      (it.variation||'').toLowerCase().includes(search) ||
+      (it.category||'').toLowerCase().includes(search)
+    )) return false;
+    return true;
+  });
 
   if (filtered.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" class="no-results">No items found</td></tr>';
@@ -722,8 +754,7 @@ function renderTable() {
       if (c.style) td.style.cssText = c.style;
       if (c.cls)   td.className = c.cls;
       td.innerHTML = c.html;
-      // Clicking any data cell opens normal drawer
-      td.addEventListener('click', () => openDrawer(item));
+      td.addEventListener('click', (e) => handleRowTap(e, item, tr));
       tr.appendChild(td);
     });
 
@@ -823,6 +854,7 @@ function closeDrawer() {
   document.getElementById('drawer').classList.remove('open');
   document.getElementById('drawer-backdrop').style.display = 'none';
   activeItem = null;
+  clearRowSelection();
   renderTable();
   setTimeout(() => { const el = document.getElementById('scanner-input'); if(el) el.focus(); }, 300);
 }
@@ -1229,21 +1261,113 @@ function refocusScanner() {
 // ══════════════════════════════════════════════════════
 // SCAN HANDLER
 // ══════════════════════════════════════════════════════
+// Track which row is currently selected (first tap)
+let selectedRow = null;
+let selectedItem = null;
+
+function handleRowTap(e, item, tr) {
+  // If filter input was clicked — do nothing to the row
+  if (e.target.classList.contains('col-filter')) return;
+
+  if (selectedRow === tr) {
+    // Second tap on same row — open drawer
+    openDrawer(item);
+  } else {
+    // First tap — just highlight
+    if (selectedRow) selectedRow.classList.remove('pl-selected');
+    selectedRow  = tr;
+    selectedItem = item;
+    tr.classList.add('pl-selected');
+    tr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+// Clear selection when drawer closes
+function clearRowSelection() {
+  if (selectedRow) selectedRow.classList.remove('pl-selected');
+  selectedRow  = null;
+  selectedItem = null;
+}
+
 function normalizeSKU(val) {
   const s = String(val || '').trim();
   if (/^\d+$/.test(s)) return String(Number(s));
   return s.toLowerCase();
 }
 
+// Multi-scan accumulation state
+let scanBuffer = { sku: null, count: 0, item: null, timer: null };
+
 async function handleScan(code) {
   const normalCode = normalizeSKU(code);
   const item = picklist.find(r => normalizeSKU(r.sku) === normalCode);
-  if (item) {
-    hideRejected();
-    openDrawer(item);
-  } else {
+
+  if (!item) {
+    // Unknown SKU — flush any pending buffer first
+    flushScanBuffer();
     showRejected(code);
+    return;
   }
+
+  hideRejected();
+
+  if (scanBuffer.sku === normalCode) {
+    // Same SKU scanned again — accumulate
+    scanBuffer.count++;
+    showScanFeedback(item, scanBuffer.count);
+  } else {
+    // Different SKU — flush previous buffer then start new one
+    flushScanBuffer();
+    scanBuffer = { sku: normalCode, count: 1, item: item, timer: null };
+    showScanFeedback(item, 1);
+  }
+
+  // Reset the 1.5s pause timer
+  clearTimeout(scanBuffer.timer);
+  scanBuffer.timer = setTimeout(() => {
+    flushScanBuffer();
+  }, 1500);
+}
+
+function flushScanBuffer() {
+  if (!scanBuffer.item || scanBuffer.count === 0) return;
+  const item  = scanBuffer.item;
+  const count = scanBuffer.count;
+  scanBuffer = { sku: null, count: 0, item: null, timer: null };
+  hideScanFeedback();
+  openDrawerWithCases(item, count);
+}
+
+function openDrawerWithCases(item, cases) {
+  openDrawer(item);
+  // Override cases after drawer populates
+  setTimeout(() => {
+    document.getElementById('d-cases').value = cases;
+    drawerUpdateTotal();
+  }, 50);
+}
+
+function showScanFeedback(item, count) {
+  let fb = document.getElementById('scan-feedback');
+  if (!fb) {
+    fb = document.createElement('div');
+    fb.id = 'scan-feedback';
+    fb.style.cssText = `position:fixed;top:80px;left:50%;transform:translateX(-50%);
+      background:var(--surface);border:1.5px solid var(--accent-border);border-radius:12px;
+      padding:10px 20px;z-index:500;text-align:center;pointer-events:none;
+      box-shadow:0 4px 20px rgba(0,0,0,0.4);min-width:200px;`;
+    document.body.appendChild(fb);
+  }
+  fb.innerHTML = `
+    <div style="font-size:11px;color:var(--text2);margin-bottom:2px;">${item.name.substring(0,30)}${item.name.length>30?'…':''}</div>
+    <div style="font-size:28px;font-weight:700;color:var(--accent);">${count} <span style="font-size:14px;color:var(--text2)">case${count!==1?'s':''}</span></div>
+    <div style="font-size:11px;color:var(--text3);margin-top:2px;">Opening in 1.5s…</div>`;
+  fb.style.display = 'block';
+}
+
+function hideScanFeedback() {
+  const fb = document.getElementById('scan-feedback');
+  if (fb) fb.style.display = 'none';
 }
 
 // ══════════════════════════════════════════════════════

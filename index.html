@@ -327,6 +327,18 @@ tr.pl-new .pl-name { color: #60a5fa; }
 .filter-row th:last-child { padding-right: 14px; }
 .col-filter { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 11px; padding: 4px 6px; outline: none; }
 .col-filter:focus { border-color: var(--accent); }
+
+/* ── OFFLINE STATUS BAR ── */
+.sync-bar { display: flex; align-items: center; gap: 8px; padding: 6px 14px; font-size: 12px; font-weight: 500; transition: background 0.3s; }
+.sync-bar.online  { background: transparent; color: var(--text3); border-bottom: 1px solid transparent; }
+.sync-bar.offline { background: rgba(248,113,113,0.1); border-bottom: 1px solid rgba(248,113,113,0.2); color: var(--danger); }
+.sync-bar.syncing { background: rgba(245,158,11,0.1); border-bottom: 1px solid rgba(245,158,11,0.2); color: var(--accent); }
+.sync-bar.pending { background: rgba(245,158,11,0.08); border-bottom: 1px solid rgba(245,158,11,0.15); color: var(--accent); }
+.sync-indicator { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.sync-bar.online  .sync-indicator { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.sync-bar.offline .sync-indicator { background: var(--danger); box-shadow: 0 0 5px var(--danger); }
+.sync-bar.syncing .sync-indicator { background: var(--accent); animation: pulse 0.8s ease-in-out infinite; }
+.sync-bar.pending .sync-indicator { background: var(--accent); }
 .hidden { display: none !important; }
 </style>
 </head>
@@ -406,6 +418,12 @@ tr.pl-new .pl-name { color: #60a5fa; }
         spellcheck="false"
       />
     </div>
+  </div>
+
+  <!-- Sync status bar -->
+  <div class="sync-bar online" id="sync-bar">
+    <div class="sync-indicator"></div>
+    <span id="sync-txt">Online</span>
   </div>
 
   <!-- Rejected flash banner -->
@@ -609,6 +627,7 @@ async function launch() {
   sc.style.flexDirection = 'column';
   document.getElementById('active-tab-label').textContent = cfg.tab;
   await loadPicklist();
+  initSyncEngine();
   setTimeout(initScanner, 100);
 }
 
@@ -940,55 +959,57 @@ function clearOverride() {
 async function confirmPick() {
   const item = activeItem; if (!item) return;
 
-  // Resolve case size (may have been manually entered)
   let cs = getCaseSize();
-
-  // Get final units — override takes precedence over case calc
   const { units, source } = getFinalUnits();
-
-  // Allow 0 units (e.g. note-only entries)
   const unitsToWrite = (units !== null) ? units : 0;
+
+  const noteVal = document.getElementById('d-notes').value.trim();
+  const csVal   = document.getElementById('d-case-inp').value;
+  const caseSize = cs || (csVal ? Number(csVal) : null);
+
   const btn = document.getElementById('d-confirm-btn');
   const lbl = document.getElementById('d-confirm-lbl');
   btn.disabled = true;
   lbl.innerHTML = '<span class="spinner"></span>';
 
-  if (cfg.demo) {
-    await sleep(600);
-    // Update local picklist
-    const idx = picklist.findIndex(r => r.sku === item.sku);
-    if (idx >= 0) {
-      picklist[idx].unitsPicked = (Number(picklist[idx].unitsPicked)||0) + unitsToWrite;
-      if (!picklist[idx].caseSize && cs) picklist[idx].caseSize = cs;
-      const noteVal = document.getElementById('d-notes').value.trim();
-      if (noteVal !== '') picklist[idx].notes = noteVal;
-    }
-    showToast(`✓ ${unitsToWrite} units logged`, 'ok');
-  } else {
-    try {
-      const csParam   = cs ? `&caseSize=${cs}` : '';
-      const noteVal   = document.getElementById('d-notes').value.trim();
-      const noteParam = noteVal !== '' ? `&note=${enc(noteVal)}` : '';
-      const r = await fetch(`${cfg.scriptUrl}?action=write&row=${item.rowIndex}&units=${unitsToWrite}&sheet=${enc(cfg.tab)}${csParam}${noteParam}`);
-      const d = await r.json();
-      if (d.success) {
-        const idx = picklist.findIndex(r => r.sku === item.sku);
-        if (idx >= 0) {
-          picklist[idx].unitsPicked = d.newTotal;
-          if (!picklist[idx].caseSize && cs) picklist[idx].caseSize = cs;
-          const noteVal = document.getElementById('d-notes').value.trim();
-          if (noteVal !== '') picklist[idx].notes = noteVal;
-        }
-        showToast(`✓ ${unitsToWrite} units saved`, 'ok');
-      } else {
-        showToast('Write failed: '+(d.reason||'unknown'), 'err');
-      }
-    } catch(e) { showToast('Network error', 'err'); }
+  // Build the pick record
+  const pick = {
+    id:        Date.now() + Math.random(),
+    rowIndex:  item.rowIndex,
+    sku:       item.sku,
+    name:      item.name,
+    units:     unitsToWrite,
+    caseSize:  caseSize || null,
+    note:      noteVal,
+    sheet:     cfg.tab,
+    ts:        new Date().toISOString(),
+    synced:    false,
+  };
+
+  // Update local picklist immediately so UI reflects the pick
+  const idx = picklist.findIndex(r => r.sku === item.sku);
+  if (idx >= 0) {
+    picklist[idx].unitsPicked = (Number(picklist[idx].unitsPicked) || 0) + unitsToWrite;
+    if (!picklist[idx].caseSize && caseSize) picklist[idx].caseSize = caseSize;
+    if (noteVal) picklist[idx].notes = noteVal;
   }
 
   btn.disabled = false;
   lbl.innerHTML = '✓ Confirm Pull';
+
+  if (cfg.demo) {
+    // Demo mode — no sheet to write to
+    showToast(`✓ ${unitsToWrite} units logged (demo)`, 'ok');
+    closeDrawer();
+    return;
+  }
+
+  // Add to sync queue and attempt to sync
+  syncQueue.push(pick);
+  saveSyncQueue();
+  updateSyncBar();
   closeDrawer();
+  trySyncQueue();
 }
 
 // ══════════════════════════════════════════════════════
@@ -1251,6 +1272,124 @@ async function confirmAddItem() {
 
   btn.disabled = false;
   lbl.innerHTML = '➕ Add to Picklist';
+}
+
+
+// ══════════════════════════════════════════════════════
+// OFFLINE SYNC ENGINE
+// ══════════════════════════════════════════════════════
+const QUEUE_KEY   = 'pickscan_queue_v1';
+let syncQueue     = [];      // pending picks not yet written to sheet
+let isSyncing     = false;
+let isOnline      = navigator.onLine;
+
+// ── Load queue from localStorage on startup ────────────────────
+function loadSyncQueue() {
+  try {
+    const raw = localStorage.getItem(QUEUE_KEY);
+    syncQueue = raw ? JSON.parse(raw) : [];
+  } catch(e) { syncQueue = []; }
+}
+
+function saveSyncQueue() {
+  try { localStorage.setItem(QUEUE_KEY, JSON.stringify(syncQueue)); } catch(e) {}
+}
+
+// ── Sync status bar ────────────────────────────────────────────
+function updateSyncBar() {
+  const bar = document.getElementById('sync-bar');
+  const txt = document.getElementById('sync-txt');
+  if (!bar || !txt) return;
+
+  const pending = syncQueue.filter(p => !p.synced).length;
+
+  if (!isOnline) {
+    bar.className = 'sync-bar offline';
+    txt.textContent = pending > 0
+      ? `Offline — ${pending} pick${pending !== 1 ? 's' : ''} queued`
+      : 'Offline';
+  } else if (isSyncing) {
+    bar.className = 'sync-bar syncing';
+    txt.textContent = `Syncing ${pending} pick${pending !== 1 ? 's' : ''}…`;
+  } else if (pending > 0) {
+    bar.className = 'sync-bar pending';
+    txt.textContent = `${pending} pick${pending !== 1 ? 's' : ''} pending sync`;
+  } else {
+    bar.className = 'sync-bar online';
+    txt.textContent = 'Online';
+  }
+}
+
+// ── Try to sync the queue ──────────────────────────────────────
+async function trySyncQueue() {
+  if (isSyncing || !isOnline || cfg.demo) return;
+  const pending = syncQueue.filter(p => !p.synced);
+  if (pending.length === 0) return;
+
+  isSyncing = true;
+  updateSyncBar();
+
+  for (const pick of pending) {
+    try {
+      const csParam   = pick.caseSize ? `&caseSize=${pick.caseSize}` : '';
+      const noteParam = pick.note     ? `&note=${enc(pick.note)}`    : '';
+      const url = `${cfg.scriptUrl}?action=write&row=${pick.rowIndex}&units=${pick.units}&sheet=${enc(pick.sheet)}${csParam}${noteParam}`;
+      const res  = await fetch(url);
+      const data = await res.json();
+      if (data.success) {
+        pick.synced = true;
+      } else {
+        // Script returned an error — don't retry this pick endlessly
+        // Mark as failed so we don't block the queue
+        console.warn('Sync failed for pick:', pick.sku, data.reason);
+        pick.syncError = data.reason || 'unknown';
+        pick.synced = true; // remove from pending to avoid infinite retry
+      }
+    } catch(e) {
+      // Network error — leave as unsynced, will retry when online
+      console.warn('Network error syncing pick, will retry:', pick.sku);
+      break; // stop trying, wait for next online event
+    }
+    saveSyncQueue();
+    updateSyncBar();
+  }
+
+  // Clean up fully synced picks (keep last 50 for audit trail)
+  syncQueue = syncQueue.filter(p => !p.synced).concat(
+    syncQueue.filter(p => p.synced).slice(-50)
+  );
+  saveSyncQueue();
+
+  isSyncing = false;
+  updateSyncBar();
+}
+
+// ── Online / offline event listeners ──────────────────────────
+window.addEventListener('online', () => {
+  isOnline = true;
+  updateSyncBar();
+  // Small delay to let the connection stabilise before syncing
+  setTimeout(trySyncQueue, 1000);
+});
+
+window.addEventListener('offline', () => {
+  isOnline = false;
+  updateSyncBar();
+});
+
+// ── Periodic retry every 30s in case events were missed ───────
+setInterval(() => {
+  isOnline = navigator.onLine;
+  if (isOnline) trySyncQueue();
+  updateSyncBar();
+}, 30000);
+
+// ── Init: load queue and sync any pending from previous session ─
+function initSyncEngine() {
+  loadSyncQueue();
+  isOnline = navigator.onLine;
+  updateSyncBar();
+  if (isOnline) setTimeout(trySyncQueue, 2000);
 }
 
 function refocusScanner() {

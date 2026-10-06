@@ -1017,8 +1017,8 @@ async function confirmPick() {
     synced:    false,
   };
 
-  // Update local picklist immediately so UI reflects the pick
-  const idx = picklist.findIndex(r => r.sku === item.sku);
+  // Update local picklist — no cap, pickers can exceed target
+  const idx = picklist.findIndex(r => normalizeSKU(r.sku) === normalizeSKU(item.sku));
   if (idx >= 0) {
     picklist[idx].unitsPicked = (Number(picklist[idx].unitsPicked) || 0) + unitsToWrite;
     if (!picklist[idx].caseSize && caseSize) picklist[idx].caseSize = caseSize;
@@ -1584,41 +1584,67 @@ async function autoConfirmPick(item, cases) {
   clearTimeout(autoCloseTimer);
   removeAutoCloseBar();
 
+  // Resolve case size
   let cs = item.caseSize && Number(item.caseSize) > 0 ? Number(item.caseSize) : null;
   if (!cs) {
-    const manVal = parseInt(document.getElementById('d-case-inp').value);
-    if (manVal > 0) cs = manVal;
+    const el = document.getElementById('d-case-inp');
+    if (el) { const v = parseInt(el.value); if (v > 0) cs = v; }
   }
-  const overrideVal = document.getElementById('d-override').value.trim();
+
+  // Resolve units — override takes precedence
+  const overrideEl  = document.getElementById('d-override');
+  const overrideVal = overrideEl ? overrideEl.value.trim() : '';
   let units;
-  if (overrideVal !== '' && parseInt(overrideVal) >= 0) {
+  if (overrideVal !== '' && !isNaN(parseInt(overrideVal)) && parseInt(overrideVal) >= 0) {
     units = parseInt(overrideVal);
   } else {
     units = cs ? cases * cs : 0;
   }
 
-  const noteVal  = document.getElementById('d-notes').value.trim();
+  const noteEl  = document.getElementById('d-notes');
+  const noteVal = noteEl ? noteEl.value.trim() : '';
   const caseSize = cs;
 
-  // Update local picklist immediately
-  const idx = picklist.findIndex(r => r.sku === item.sku);
+  // Update local picklist — no cap, pickers can exceed target
+  const idx = picklist.findIndex(r => normalizeSKU(r.sku) === normalizeSKU(item.sku));
   if (idx >= 0) {
     picklist[idx].unitsPicked = (Number(picklist[idx].unitsPicked) || 0) + units;
     if (!picklist[idx].caseSize && caseSize) picklist[idx].caseSize = caseSize;
     if (noteVal) picklist[idx].notes = noteVal;
   }
 
-  showToast(`✓ ${cases} case${cases!==1?'s':''} · ${units} units`, 'ok');
-  closeDrawer();
+  // Close drawer first, THEN render so table shows updated value
+  // (closeDrawer calls renderTable, which is fine here)
+  showToast(`✓ ${cases} case${cases!==1?'s':''} · ${units} unit${units!==1?'s':''}`, 'ok');
+
+  // Close drawer without calling renderTable internally
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-backdrop').style.display = 'none';
+  activeItem = null;
+  clearRowSelection();
+
+  // Now render with the already-updated picklist data
+  renderTable();
+
+  setTimeout(() => {
+    const el = document.getElementById('scanner-input');
+    if (el) el.focus();
+  }, 100);
 
   if (cfg.demo) return;
 
   // Queue and sync
   const pick = {
-    id: Date.now() + Math.random(),
-    rowIndex: item.rowIndex, sku: item.sku, name: item.name,
-    units, caseSize, note: noteVal, sheet: cfg.tab,
-    ts: new Date().toISOString(), synced: false,
+    id:       Date.now() + Math.random(),
+    rowIndex: item.rowIndex,
+    sku:      item.sku,
+    name:     item.name,
+    units,
+    caseSize,
+    note:     noteVal,
+    sheet:    cfg.tab,
+    ts:       new Date().toISOString(),
+    synced:   false,
   };
   syncQueue.push(pick);
   saveSyncQueue();

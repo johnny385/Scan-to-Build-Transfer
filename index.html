@@ -844,9 +844,27 @@ function openDrawer(item) {
   const hint = document.getElementById('note-only-hint');
   if (hint) hint.classList.add('hidden');
 
+  // Reset auto-close state
+  drawerTouched = false;
+  clearTimeout(autoCloseTimer);
+  removeAutoCloseBar();
+
   document.getElementById('drawer-backdrop').style.display = 'block';
   requestAnimationFrame(() => document.getElementById('drawer').classList.add('open'));
   highlightRow(item.sku);
+
+  // Any touch/input inside the drawer marks it as touched (cancels auto-close)
+  const drawerEl = document.getElementById('drawer');
+  const markTouched = () => {
+    if (!drawerTouched) {
+      drawerTouched = true;
+      clearTimeout(autoCloseTimer);
+      removeAutoCloseBar();
+    }
+  };
+  drawerEl.addEventListener('touchstart', markTouched, { once: false, passive: true });
+  drawerEl.addEventListener('mousedown', markTouched, { once: false });
+  drawerEl.addEventListener('focus', markTouched, { capture: true, once: false });
 }
 
 // Note-only mode — opened by tapping the checkbox circle
@@ -879,6 +897,9 @@ function closeDrawer() {
 }
 
 function drawerAdj(delta) {
+  drawerTouched = true;
+  clearTimeout(autoCloseTimer);
+  removeAutoCloseBar();
   const el = document.getElementById('d-cases');
   el.value = Math.max(0, (parseInt(el.value)||0) + delta);
   drawerUpdateTotal();
@@ -944,6 +965,9 @@ function overrideFocused() {
 }
 
 function overrideAdj(delta) {
+  drawerTouched = true;
+  clearTimeout(autoCloseTimer);
+  removeAutoCloseBar();
   const overInp = document.getElementById('d-override');
   const cur = parseInt(overInp.value) || 0;
   overInp.value = Math.max(0, cur + delta);
@@ -958,6 +982,13 @@ function clearOverride() {
 
 async function confirmPick() {
   const item = activeItem; if (!item) return;
+  drawerTouched = true;
+  clearTimeout(autoCloseTimer);
+  removeAutoCloseBar();
+  // Cancel any pending scan buffer for this item
+  if (scanBuffer.item && normalizeSKU(scanBuffer.item.sku) === normalizeSKU(item.sku)) {
+    scanBuffer = { sku: null, count: 0, item: null, timer: null };
+  }
 
   let cs = getCaseSize();
   const { units, source } = getFinalUnits();
@@ -1024,19 +1055,31 @@ function initScanner() {
            document.getElementById('add-drawer').classList.contains('open');
   }
 
+  // Returns true if a filter input or other non-scanner input has focus
+  function filterHasFocus() {
+    const active = document.activeElement;
+    if (!active || active === input) return false;
+    // Filter inputs, textareas, any input that isn't the scanner bar
+    return active.tagName === 'INPUT' ||
+           active.tagName === 'TEXTAREA' ||
+           active.tagName === 'SELECT' ||
+           active.classList.contains('col-filter');
+  }
+
   function focus() {
-    if (!anyDrawerOpen()) input.focus();
+    if (!anyDrawerOpen() && !filterHasFocus()) input.focus();
   }
 
   // Focus immediately on launch
   focus();
 
-  // Re-focus on clicks/taps — but never when a drawer is open,
-  // and never when tapping an input, textarea, or button
+  // Re-focus on clicks/taps — but never when a drawer is open
+  // and never when tapping any interactive element
   document.addEventListener('click', e => {
     if (anyDrawerOpen()) return;
     const tag = e.target.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON' || tag === 'SELECT') return;
+    if (e.target.classList.contains('col-filter')) return;
     focus();
   });
 
@@ -1044,16 +1087,41 @@ function initScanner() {
     if (anyDrawerOpen()) return;
     const tag = e.target.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON' || tag === 'SELECT') return;
+    if (e.target.classList.contains('col-filter')) return;
     focus();
   });
 
-  // Re-focus on blur — but not if a drawer is open (would steal keyboard from drawer fields)
+  // Re-focus on blur — but not if a drawer or filter has focus
   input.addEventListener('blur', () => {
-    setTimeout(() => { if (!anyDrawerOpen()) focus(); }, 150);
+    setTimeout(() => {
+      if (!anyDrawerOpen() && !filterHasFocus()) focus();
+    }, 200);
   });
 
-  // Periodic re-focus safety net — only when no drawer is open
-  setInterval(() => { if (!anyDrawerOpen()) focus(); }, 3000);
+  // Periodic safety net — skip if filter or drawer has focus
+  setInterval(() => {
+    if (!anyDrawerOpen() && !filterHasFocus()) focus();
+  }, 3000);
+
+  // When a scanner barcode arrives, always route it to scanner input
+  // even if a filter is active — barcode scanners type very fast
+  // so we detect speed > SCANNER_SPEED and redirect
+  const SCANNER_SPEED = 30; // ms between chars — scanners are < 30ms
+  let lastKeyTime = 0;
+  document.addEventListener('keydown', e => {
+    if (anyDrawerOpen()) return;
+    if (e.target === input) return; // already going to scanner input
+    const now = Date.now();
+    const gap = now - lastKeyTime;
+    lastKeyTime = now;
+    // If keystrokes arrive very fast (scanner speed) and target is a filter
+    // redirect to scanner input
+    if (gap < SCANNER_SPEED && e.key.length === 1 && filterHasFocus()) {
+      e.preventDefault();
+      input.value += e.key;
+      input.focus();
+    }
+  }, true); // capture phase so we intercept before filter gets it
 
   // Enter fires the lookup
   input.addEventListener('keydown', e => {
@@ -1434,15 +1502,18 @@ function normalizeSKU(val) {
   return s.toLowerCase();
 }
 
-// Multi-scan accumulation state
-let scanBuffer = { sku: null, count: 0, item: null, timer: null };
+// ══════════════════════════════════════════════════════
+// SCAN ENGINE — instant confirm, auto-close review drawer
+// ══════════════════════════════════════════════════════
+let scanBuffer      = { sku: null, count: 0, item: null, timer: null };
+let autoCloseTimer  = null;
+let drawerTouched   = false;  // true if picker interacted with drawer
 
 async function handleScan(code) {
   const normalCode = normalizeSKU(code);
   const item = picklist.find(r => normalizeSKU(r.sku) === normalCode);
 
   if (!item) {
-    // Unknown SKU — flush any pending buffer first
     flushScanBuffer();
     showRejected(code);
     return;
@@ -1451,39 +1522,131 @@ async function handleScan(code) {
   hideRejected();
 
   if (scanBuffer.sku === normalCode) {
-    // Same SKU scanned again — accumulate
+    // Same SKU — accumulate case count
     scanBuffer.count++;
+    // If drawer already open for this item, update cases live
+    if (activeItem && normalizeSKU(activeItem.sku) === normalCode) {
+      document.getElementById('d-cases').value = scanBuffer.count;
+      drawerUpdateTotal();
+      resetAutoClose();
+    }
     showScanFeedback(item, scanBuffer.count);
   } else {
-    // Different SKU — flush previous buffer then start new one
-    flushScanBuffer();
-    scanBuffer = { sku: normalCode, count: 1, item: item, timer: null };
+    // Different SKU — flush previous immediately then start new buffer
+    await flushScanBuffer();
+    scanBuffer = { sku: normalCode, count: 1, item, timer: null };
     showScanFeedback(item, 1);
   }
 
-  // Reset the 1.5s pause timer
-  clearTimeout(scanBuffer.timer);
-  scanBuffer.timer = setTimeout(() => {
-    flushScanBuffer();
-  }, 1500);
+  // Open drawer immediately on first scan of a new item
+  if (scanBuffer.count === 1) {
+    openDrawerScan(item, 1);
+  }
 }
 
-function flushScanBuffer() {
+async function flushScanBuffer() {
   if (!scanBuffer.item || scanBuffer.count === 0) return;
   const item  = scanBuffer.item;
   const count = scanBuffer.count;
-  scanBuffer = { sku: null, count: 0, item: null, timer: null };
+  scanBuffer  = { sku: null, count: 0, item: null, timer: null };
   hideScanFeedback();
-  openDrawerWithCases(item, count);
+  // If drawer is open for this item and picker hasn't touched it — auto-confirm
+  if (activeItem && normalizeSKU(activeItem.sku) === normalizeSKU(item.sku) && !drawerTouched) {
+    await autoConfirmPick(item, count);
+  }
 }
 
-function openDrawerWithCases(item, cases) {
+// Opens drawer in scan mode — auto-closes after 2s if not touched
+function openDrawerScan(item, cases) {
+  drawerTouched = false;
+  clearTimeout(autoCloseTimer);
   openDrawer(item);
-  // Override cases after drawer populates
   setTimeout(() => {
     document.getElementById('d-cases').value = cases;
     drawerUpdateTotal();
+    resetAutoClose();
   }, 50);
+}
+
+function resetAutoClose() {
+  clearTimeout(autoCloseTimer);
+  if (drawerTouched) return;
+  updateAutoCloseBar(2000);
+  autoCloseTimer = setTimeout(async () => {
+    if (!drawerTouched && activeItem) {
+      await autoConfirmPick(activeItem, parseInt(document.getElementById('d-cases').value) || 1);
+    }
+  }, 2000);
+}
+
+// Auto-confirm: write pick without any button press
+async function autoConfirmPick(item, cases) {
+  clearTimeout(autoCloseTimer);
+  removeAutoCloseBar();
+
+  let cs = item.caseSize && Number(item.caseSize) > 0 ? Number(item.caseSize) : null;
+  if (!cs) {
+    const manVal = parseInt(document.getElementById('d-case-inp').value);
+    if (manVal > 0) cs = manVal;
+  }
+  const overrideVal = document.getElementById('d-override').value.trim();
+  let units;
+  if (overrideVal !== '' && parseInt(overrideVal) >= 0) {
+    units = parseInt(overrideVal);
+  } else {
+    units = cs ? cases * cs : 0;
+  }
+
+  const noteVal  = document.getElementById('d-notes').value.trim();
+  const caseSize = cs;
+
+  // Update local picklist immediately
+  const idx = picklist.findIndex(r => r.sku === item.sku);
+  if (idx >= 0) {
+    picklist[idx].unitsPicked = (Number(picklist[idx].unitsPicked) || 0) + units;
+    if (!picklist[idx].caseSize && caseSize) picklist[idx].caseSize = caseSize;
+    if (noteVal) picklist[idx].notes = noteVal;
+  }
+
+  showToast(`✓ ${cases} case${cases!==1?'s':''} · ${units} units`, 'ok');
+  closeDrawer();
+
+  if (cfg.demo) return;
+
+  // Queue and sync
+  const pick = {
+    id: Date.now() + Math.random(),
+    rowIndex: item.rowIndex, sku: item.sku, name: item.name,
+    units, caseSize, note: noteVal, sheet: cfg.tab,
+    ts: new Date().toISOString(), synced: false,
+  };
+  syncQueue.push(pick);
+  saveSyncQueue();
+  updateSyncBar();
+  trySyncQueue();
+}
+
+// Auto-close countdown bar inside drawer
+function updateAutoCloseBar(ms) {
+  let bar = document.getElementById('auto-close-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'auto-close-bar';
+    bar.style.cssText = 'height:3px;background:var(--accent);border-radius:2px;margin-bottom:12px;transition:width linear;width:100%;';
+    const drawerHandle = document.querySelector('#drawer .drawer-handle');
+    if (drawerHandle) drawerHandle.after(bar);
+  }
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+  requestAnimationFrame(() => {
+    bar.style.transition = `width ${ms}ms linear`;
+    bar.style.width = '0%';
+  });
+}
+
+function removeAutoCloseBar() {
+  const bar = document.getElementById('auto-close-bar');
+  if (bar) bar.remove();
 }
 
 function showScanFeedback(item, count) {
@@ -1493,15 +1656,16 @@ function showScanFeedback(item, count) {
     fb.id = 'scan-feedback';
     fb.style.cssText = `position:fixed;top:80px;left:50%;transform:translateX(-50%);
       background:var(--surface);border:1.5px solid var(--accent-border);border-radius:12px;
-      padding:10px 20px;z-index:500;text-align:center;pointer-events:none;
-      box-shadow:0 4px 20px rgba(0,0,0,0.4);min-width:200px;`;
+      padding:8px 16px;z-index:500;text-align:center;pointer-events:none;
+      box-shadow:0 4px 20px rgba(0,0,0,0.4);min-width:180px;`;
     document.body.appendChild(fb);
   }
   fb.innerHTML = `
-    <div style="font-size:11px;color:var(--text2);margin-bottom:2px;">${item.name.substring(0,30)}${item.name.length>30?'…':''}</div>
-    <div style="font-size:28px;font-weight:700;color:var(--accent);">${count} <span style="font-size:14px;color:var(--text2)">case${count!==1?'s':''}</span></div>
-    <div style="font-size:11px;color:var(--text3);margin-top:2px;">Opening in 1.5s…</div>`;
+    <div style="font-size:11px;color:var(--text2);margin-bottom:1px;">${item.name.substring(0,32)}${item.name.length>32?'…':''}</div>
+    <div style="font-size:26px;font-weight:700;color:var(--accent);">${count} <span style="font-size:13px;color:var(--text2)">case${count!==1?'s':''}</span></div>`;
   fb.style.display = 'block';
+  clearTimeout(fb._hideTimer);
+  fb._hideTimer = setTimeout(() => { fb.style.display = 'none'; }, 1800);
 }
 
 function hideScanFeedback() {
